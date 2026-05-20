@@ -1,0 +1,35 @@
+orch of AI agents:
+
+add gatekeeper to the hw.
+flag: --dangerous-skip-permissions
+
+
+HW2:
+agents debate.
+create 3 agents, we should choose a question that we want to debate. the other is the "referee"
+agents must generate "2 sya7", we can imit them in words/time...
+1 agent should be should try to prove truth second one should do the opposite.
+every agent has 10 prompts (total 20).
+create skills...
+request them to give examples and to search in net...
+check the case if 1 agent controls the other.
+1 referee should check if every thing is giving valuable things.
+at the end the 3rd agent must decide the winner, and should explain why he thinks this.
+every agent have the full flow:
+Agent[LLM,Context Window. Tools, RAG]
+THE REFEREE will explain the game description to the 2 agents
+the agents must use minimum 1 tool: search in web. RAG is optional.
+multiple skills for every agent.
+
+note: add timeout, maybe on agent be stucked...
+always check if the agents are alive, if not we should wake him up or restart...
+we will apply python code.
+
+*skills of the project not global???
+add env.example to add there the API key.
+gatekeeper that counts the tokens.
+no draw between the agents, must be a winner.
+work according to the file in the moodle (how to develop pro software).
+cybersecurity check...
+[UI, CLI, API]: sdk. SO THE agent can debug better
+add logs (there are ready made libraries for the logs (debug, wanrning...)), and we can use FIFO for that (we can set params like: use 20 files and every file has 500 lines...).
