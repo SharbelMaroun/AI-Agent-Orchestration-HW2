@@ -75,6 +75,20 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-21 — Phase 3.1 + 3.2: schemas and config loader
+
+**Context:** Implementing the typed boundary between processes (IPC envelopes) and between disk and runtime (config JSON). Both need to fail loudly on drift rather than silently mis-route a field.
+**Goal:** Land Pydantic models for all wire messages and all three config files, with version validation and `extra="forbid"` everywhere a typo could go un-noticed.
+**Decisions:**
+  1. IPC envelopes (`OpeningBrief`, `Ready`, `YourTurn`, `Heartbeat`) all extend a private `_Envelope` base that sets `extra="forbid"`. A sender typo crashes the receiver instead of being silently dropped.
+  2. Config models also use `extra="forbid"` — a stray key in `setup.json` (e.g., `"rate_lmit"`) raises at load time rather than reading as the default.
+  3. `validate_version(cfg, expected="1.00")` is a free function, not a model validator, so callers can compare against runtime-computed expected versions if needed later. Loaders call it after parse.
+  4. `load_env` is a thin wrapper over `python-dotenv` with `override=False` — real environment beats `.env`, matching 12-factor expectations.
+**Result:** 15 unit tests pass; ruff 0 violations; `src/debate/shared/config.py` at ~107 LOC of code (under the 150-line cap).
+**Lesson:** `extra="forbid"` on every model that crosses a boundary (process or disk) is cheap insurance. The cost is the occasional `model_dump(exclude_unset=True)` when re-serializing partial data; the benefit is that schema drift between writer and reader becomes a loud `ValidationError` rather than a silent semantic bug.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)

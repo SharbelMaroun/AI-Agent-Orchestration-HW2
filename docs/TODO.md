@@ -208,39 +208,39 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 
 ## Phase 3 — Core Code (Stage 3 part 1: agents + orchestrator)
 
-### 3.1 Schemas (`shared/schemas.py`)
-- [ ] Define `Side = Literal["dogs", "cats"]` type alias
-- [ ] Define `ChatMessage` Pydantic model (role, content)
-- [ ] Define `Ping` Pydantic model (round, side, text, citations, refers_to_ping, timestamp, tokens_in, tokens_out)
-- [ ] Define `Score` Pydantic model (ping_round, side, structure, logos, pathos, ethos, clash, rationale)
-- [ ] Define `Verdict` Pydantic model (winner, dogs_total, cats_total, margin, written_rationale, key_points_dogs, key_points_cats)
-- [ ] Define `DebateResult` Pydantic model
-- [ ] Define `OpeningBrief` Pydantic model
-- [ ] Define `YourTurn` Pydantic model
-- [ ] Define `Ready` envelope
-- [ ] Define `CompletionResponse` Pydantic model
-- [ ] Define `MessageEnvelope` union type
-- [ ] Add `model_config` ConfigDict with `extra = "forbid"` to envelopes
-- [ ] Write `test_schemas.py` — Ping round-trip JSON
-- [ ] Write `test_schemas.py` — Score round-trip JSON
-- [ ] Write `test_schemas.py` — Verdict round-trip JSON
-- [ ] Write `test_schemas.py` — invalid side rejected
-- [ ] Write `test_schemas.py` — extra field rejected
+### 3.1 Schemas (`shared/schemas.py`) ✅
+- [x] Define `Side = Literal["dogs", "cats"]` type alias
+- [x] Define `ChatMessage` Pydantic model (role, content)
+- [x] Define `Ping` Pydantic model (round, side, text, citations, refers_to_ping, timestamp, tokens_in, tokens_out)
+- [x] Define `Score` Pydantic model (ping_round, side, structure, logos, pathos, ethos, clash, rationale)
+- [x] Define `Verdict` Pydantic model (winner, dogs_total, cats_total, margin, written_rationale, key_points_dogs, key_points_cats)
+- [x] Define `DebateResult` Pydantic model
+- [x] Define `OpeningBrief` Pydantic model
+- [x] Define `YourTurn` Pydantic model
+- [x] Define `Ready` envelope
+- [x] Define `CompletionResponse` Pydantic model
+- [x] Define `MessageEnvelope` union type
+- [x] Add `model_config` ConfigDict with `extra = "forbid"` to envelopes
+- [x] Write `test_schemas.py` — Ping round-trip JSON
+- [x] Write `test_schemas.py` — Score round-trip JSON
+- [x] Write `test_schemas.py` — Verdict round-trip JSON
+- [x] Write `test_schemas.py` — invalid side rejected
+- [x] Write `test_schemas.py` — extra field rejected
 
-### 3.2 Config loader (`shared/config.py`)
-- [ ] Define `SetupConfig` Pydantic model mirroring setup.json
-- [ ] Define `RateLimitConfig` Pydantic model
-- [ ] Define `LoggingConfig` Pydantic model
-- [ ] Implement `load_setup(path) -> SetupConfig`
-- [ ] Implement `load_rate_limits(path) -> RateLimitConfig`
-- [ ] Implement `load_logging(path) -> LoggingConfig`
-- [ ] Implement `validate_version(cfg, expected="1.00")` helper
-- [ ] Implement `load_env(dotenv_path=".env")` that calls dotenv
-- [ ] Write `test_config_loads_setup`
-- [ ] Write `test_config_loads_rate_limits`
-- [ ] Write `test_config_loads_logging`
-- [ ] Write `test_config_rejects_wrong_version`
-- [ ] Write `test_config_missing_file_raises`
+### 3.2 Config loader (`shared/config.py`) ✅
+- [x] Define `SetupConfig` Pydantic model mirroring setup.json
+- [x] Define `RateLimitConfig` Pydantic model
+- [x] Define `LoggingConfig` Pydantic model
+- [x] Implement `load_setup(path) -> SetupConfig`
+- [x] Implement `load_rate_limits(path) -> RateLimitConfig`
+- [x] Implement `load_logging(path) -> LoggingConfig`
+- [x] Implement `validate_version(cfg, expected="1.00")` helper
+- [x] Implement `load_env(dotenv_path=".env")` that calls dotenv
+- [x] Write `test_config_loads_setup`
+- [x] Write `test_config_loads_rate_limits`
+- [x] Write `test_config_loads_logging`
+- [x] Write `test_config_rejects_wrong_version`
+- [x] Write `test_config_missing_file_raises`
 
 ### 3.3 LLM Provider abstraction
 - [ ] Define `LLMProvider` ABC in `base.py`
