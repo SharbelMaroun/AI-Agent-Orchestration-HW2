@@ -32,8 +32,8 @@ The Judge moderates all communication (no direct Pro ↔ Con). Each agent mainta
 |---|---|---|
 | 0 | Documentation & design | 🟨 In progress (review pending) |
 | 1 | Manual debate (Stage 1 transcript) | ⬜ Not started |
-| **2** | **Project bootstrap (this commit)** | **🟨 Skeleton complete; pending user verification** |
-| 3 | Core code (schemas, providers, agents, orchestrator, SDK) | ⬜ Not started |
+| 2 | Project bootstrap | ✅ Complete |
+| **3** | **Core code (schemas, providers, agents, orchestrator, SDK)** | **🟨 In progress — 3.1 schemas ✅, 3.2 config loader ✅, 3.3 LLM providers ✅; next: 3.4 BaseAgent** |
 | 4 | Engineering (gatekeeper, watchdog, logger, search) | ⬜ Not started |
 | 5 | RAG | ⬜ Not started |
 | 6 | Tests + coverage ≥ 85% | ⬜ Not started |
@@ -41,6 +41,8 @@ The Judge moderates all communication (no direct Pro ↔ Con). Each agent mainta
 | 8 | Submission | ⬜ Not started |
 
 See `docs/TODO.md` for the full ~560-task breakdown.
+
+**Current test snapshot (2026-05-21, after Phase 3.3):** 28 unit tests pass · ruff 0 violations · coverage 80.66% on `src/debate/` (below the 85% submission gate but on track — the gate is intentionally deferred until Phase 6 per `docs/PROMPTS.md`, since the un-implemented service skeletons drag the percentage down).
 
 ## Quick links
 
