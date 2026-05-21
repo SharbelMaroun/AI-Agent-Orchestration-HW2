@@ -264,19 +264,19 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] Write `test_openai_provider_token_extraction`
 - [x] Write `test_provider_missing_env_var_raises`
 
-### 3.4 Base agent (`agents/base_agent.py`)
-- [ ] Define `BaseAgent` ABC
-- [ ] Constructor: id, system_prompt, provider, gatekeeper, logger, model_name
-- [ ] Attribute: `history: list[ChatMessage]`
-- [ ] Method: `_append_user(content)`
-- [ ] Method: `_append_assistant(content)`
-- [ ] Method: `generate(user_message) -> CompletionResponse` (calls gatekeeper-wrapped provider)
-- [ ] Method: `receive(envelope)` (abstract)
-- [ ] Method: `run(inbox_queue, outbox_queue)` (process main loop)
-- [ ] Method: `heartbeat(out_queue)`
-- [ ] Write `test_base_agent_history_append`
-- [ ] Write `test_base_agent_generate_uses_gatekeeper` (mocked)
-- [ ] Write `test_base_agent_history_disjoint_per_instance`
+### 3.4 Base agent (`agents/base_agent.py`) ✅
+- [x] Define `BaseAgent` ABC
+- [x] Constructor: id, system_prompt, provider, gatekeeper, logger, model_name
+- [x] Attribute: `history: list[ChatMessage]`
+- [x] Method: `_append_user(content)`
+- [x] Method: `_append_assistant(content)`
+- [x] Method: `generate(user_message) -> CompletionResponse` (calls gatekeeper-wrapped provider)
+- [x] Method: `receive(envelope)` (abstract)
+- [x] Method: `run(inbox_queue, outbox_queue)` (process main loop)
+- [x] Method: `heartbeat(out_queue)`
+- [x] Write `test_base_agent_history_append`
+- [x] Write `test_base_agent_generate_uses_gatekeeper` (mocked)
+- [x] Write `test_base_agent_history_disjoint_per_instance`
 
 ### 3.5 Debate agent base (Dogs + Cats common)
 - [ ] Define `DebateAgent(BaseAgent)` abstract subclass

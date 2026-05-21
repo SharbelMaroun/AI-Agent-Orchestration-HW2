@@ -103,6 +103,20 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-21 — Phase 3.4: BaseAgent + gatekeeper-routing invariant
+
+**Context:** Three agents (Dogs, Cats, Judge) share machinery — system prompt, conversation history, the gatekeeper-wrapped LLM call, a run loop pulling from an inbox queue. The Gatekeeper itself doesn't exist yet (Phase 4.1), but `BaseAgent` must already be designed to call through it, not around it. Otherwise the "single chokepoint" rule (CLAUDE.md §5) becomes a refactor later instead of a constraint now.
+**Goal:** Encode the chokepoint as the *only* path from agent code to provider code, even before the real Gatekeeper exists.
+**Decisions:**
+  1. **Inject the gatekeeper as a `Protocol`-typed dependency.** `GatekeeperLike` declares `execute(api_call, *args, service: str = "default", **kwargs)` — structurally compatible with the future `ApiGatekeeper`. Tests pass a passthrough `MagicMock` (`gk.execute.side_effect = lambda fn, *a, **kw: fn(*a, **kw)`), so when the real one lands it's a drop-in swap.
+  2. **`generate()` always goes through `gatekeeper.execute(provider.complete, ...)`.** Never `provider.complete(...)` directly. A grep for `provider.complete(` outside the gatekeeper test will catch any future regression on the chokepoint rule.
+  3. **History is `list[ChatMessage]`, owned per-instance.** A test (`test_history_disjoint_per_instance`) builds two agents and asserts one's `generate()` does not bleed into the other's history — protects the per-process memory model from a future refactor that accidentally makes history a class attribute.
+  4. **Run loop terminates on a `None` sentinel.** Cleaner than exception-as-control-flow for shutdown; the orchestrator puts `None` into each agent's inbox when the debate ends.
+**Result:** 7 new tests (35 total, all green); ruff 0 violations; base_agent.py at 87 LOC.
+**Lesson:** When a non-negotiable architectural rule (Gatekeeper = single chokepoint) depends on code that doesn't exist yet, encode the rule with a `Protocol` and a test, not a `# TODO: route through gatekeeper later` comment. The Protocol gives the dependency a typed shape; the test gives the rule teeth.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
