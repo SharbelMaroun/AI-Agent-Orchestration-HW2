@@ -59,7 +59,7 @@ Every LLM call:
 Used by README, the analysis notebook, and the budget alert.
 
 ## 6. Budget alert
-Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of budget → `WARNING` log. If exceeds 100% → `ERROR` log + raise `BudgetExceeded` (orchestrator catches, halts debate gracefully).
+Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of budget → `WARNING` log. If exceeds 100% → `ERROR` log + raise `BudgetExceededError` (orchestrator catches, halts debate gracefully).
 
 ## 7. Queue behavior
 - FIFO `queue.Queue` per service.
@@ -70,7 +70,7 @@ Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of b
 - Retryable HTTP codes: 408, 429, 500, 502, 503, 504.
 - Network exceptions (timeout, connection reset) also retried.
 - Backoff: `retry_after_seconds × attempt_number`.
-- Max attempts from config (default 3). Final failure → raise `ApiCallFailed`.
+- Max attempts from config (default 3). Final failure → raise `ApiCallFailedError`.
 
 ## 9. Cybersecurity hook
 `execute()` accepts optional `sanitize: Callable[[str], str]` to clean prompts before sending (e.g., strip secrets from environment, mask emails). Default: no-op.
@@ -92,6 +92,6 @@ Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of b
 - **Single call success** — happy path returns response, logs tokens.
 - **Rate limit hit** — calls beyond `requests_per_minute` queue; drain succeeds after window.
 - **Transient 429** — first call returns 429, second succeeds → counted as one logical call.
-- **Hard failure** — 3 consecutive 503s → raises `ApiCallFailed`.
-- **Budget exceeded** — mock pricing to exceed budget mid-debate → raises `BudgetExceeded`.
+- **Hard failure** — 3 consecutive 503s → raises `ApiCallFailedError`.
+- **Budget exceeded** — mock pricing to exceed budget mid-debate → raises `BudgetExceededError`.
 - **Concurrent excess** — 10 simultaneous calls with `concurrent_max=2` → only 2 in flight at a time.

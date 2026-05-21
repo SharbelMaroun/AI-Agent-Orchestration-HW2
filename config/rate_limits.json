@@ -1,0 +1,27 @@
+{
+  "version": "1.00",
+  "services": {
+    "default": {
+      "requests_per_minute": 30,
+      "requests_per_hour": 500,
+      "concurrent_max": 5,
+      "retry_after_seconds": 30,
+      "max_retries": 3,
+      "queue_max_depth": 100,
+      "retryable_status_codes": [408, 429, 500, 502, 503, 504]
+    },
+    "search": {
+      "requests_per_minute": 20,
+      "requests_per_hour": 200,
+      "concurrent_max": 2,
+      "retry_after_seconds": 10,
+      "max_retries": 2,
+      "queue_max_depth": 50,
+      "retryable_status_codes": [429, 500, 502, 503, 504]
+    }
+  },
+  "budget": {
+    "warning_threshold_pct": 80,
+    "hard_limit_pct": 100
+  }
+}

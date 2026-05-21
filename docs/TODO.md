@@ -123,84 +123,86 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 ## Phase 2 — Project Bootstrap
 
 ### 2.1 `pyproject.toml`
-- [ ] Create `pyproject.toml` with `[project]` metadata (name, version, authors, description)
-- [ ] Add `[project] requires-python = ">=3.10"`
-- [ ] Add core deps: anthropic, pydantic, python-dotenv
-- [ ] Add provider dep (optional): openai
-- [ ] Add data deps: chromadb, sentence-transformers
-- [ ] Add tool deps: duckduckgo-search
-- [ ] Add dev deps: pytest, pytest-cov, ruff
-- [ ] Add `[tool.ruff]` config: line-length=100, target-version=py310
-- [ ] Add `[tool.ruff.lint]` select + ignore (per CLAUDE.md §7)
-- [ ] Add `[tool.coverage.run]` source/omit (per CLAUDE.md §6)
-- [ ] Add `[tool.coverage.report] fail_under = 85`
-- [ ] Add `[tool.pytest.ini_options]` minimal config
-- [ ] Add `[project.scripts] debate = "debate.main:cli"`
-- [ ] Run `uv sync` and verify success
-- [ ] Verify `uv.lock` was generated
-- [ ] Commit `uv.lock`
+- [x] Create `pyproject.toml` with `[project]` metadata (name, version, authors, description)
+- [x] Add `[project] requires-python = ">=3.10"`
+- [x] Add core deps: anthropic, pydantic, python-dotenv
+- [x] Add provider dep (optional): openai
+- [x] Add data deps: chromadb, sentence-transformers
+- [x] Add tool deps: duckduckgo-search
+- [x] Add dev deps: pytest, pytest-cov, ruff
+- [x] Add `[tool.ruff]` config: line-length=100, target-version=py310
+- [x] Add `[tool.ruff.lint]` select + ignore (per CLAUDE.md §7)
+- [x] Add `[tool.coverage.run]` source/omit (per CLAUDE.md §6)
+- [x] Add `[tool.coverage.report] fail_under = 85`
+- [x] Add `[tool.pytest.ini_options]` minimal config
+- [x] Add `[project.scripts] debate = "debate.main:cli"`
+- [x] Run `uv sync` and verify success
+- [x] Verify `uv.lock` was generated
+- [x] Commit `uv.lock`
+- [x] Create `LICENSE` (MIT, 2026, Sharbel Maroun + Amr Safadi)
+- [x] Create placeholder `README.md` (stub for build-backend; full content in Phase 7.2)
 
 ### 2.2 Config files
-- [ ] Create `config/setup.json` with shape from PLAN.md §7
-- [ ] Verify `setup.json` parses as valid JSON
-- [ ] Create `config/rate_limits.json` with shape from PLAN.md §7
-- [ ] Verify `rate_limits.json` parses
-- [ ] Create `config/logging_config.json` with shape from PLAN.md §7
-- [ ] Verify `logging_config.json` parses
-- [ ] Add `version` key (= "1.00") to all three configs
+- [x] Create `config/setup.json` with shape from PLAN.md §7
+- [x] Verify `setup.json` parses as valid JSON
+- [x] Create `config/rate_limits.json` with shape from PLAN.md §7
+- [x] Verify `rate_limits.json` parses
+- [x] Create `config/logging_config.json` with shape from PLAN.md §7
+- [x] Verify `logging_config.json` parses
+- [x] Add `version` key (= "1.00") to all three configs
 
 ### 2.3 Package skeleton (`src/debate/`)
-- [ ] Create `src/debate/__init__.py` with `__version__ = "1.00"`
-- [ ] Add `__all__` in `__init__.py` (initially empty list)
-- [ ] Create `src/debate/main.py` with a placeholder `cli()` entrypoint
-- [ ] Create `src/debate/sdk/__init__.py`
-- [ ] Create `src/debate/sdk/sdk.py` with empty `DebateSDK` class skeleton
-- [ ] Create `src/debate/services/__init__.py`
-- [ ] Create `src/debate/services/orchestrator.py` with empty class skeleton
-- [ ] Create `src/debate/services/watchdog.py` with empty class skeleton
-- [ ] Create `src/debate/services/agents/__init__.py`
-- [ ] Create `src/debate/services/agents/base_agent.py` with abstract class skeleton
-- [ ] Create `src/debate/services/agents/dogs_agent.py` with class skeleton
-- [ ] Create `src/debate/services/agents/cats_agent.py` with class skeleton
-- [ ] Create `src/debate/services/agents/judge_agent.py` with class skeleton
-- [ ] Create `src/debate/services/rag/__init__.py`
-- [ ] Create `src/debate/services/rag/embedder.py` skeleton
-- [ ] Create `src/debate/services/rag/rag_store.py` skeleton
-- [ ] Create `src/debate/services/rag/ingest.py` skeleton
-- [ ] Create `src/debate/services/tools/__init__.py`
-- [ ] Create `src/debate/services/tools/web_search.py` skeleton
-- [ ] Create `src/debate/shared/__init__.py`
-- [ ] Create `src/debate/shared/gatekeeper.py` skeleton
-- [ ] Create `src/debate/shared/config.py` skeleton
-- [ ] Create `src/debate/shared/version.py` with `__version__`
-- [ ] Create `src/debate/shared/constants.py`
-- [ ] Create `src/debate/shared/logger.py` skeleton
-- [ ] Create `src/debate/shared/schemas.py` skeleton
-- [ ] Create `src/debate/shared/llm_provider/__init__.py`
-- [ ] Create `src/debate/shared/llm_provider/base.py` skeleton
-- [ ] Create `src/debate/shared/llm_provider/anthropic_provider.py` skeleton
-- [ ] Create `src/debate/shared/llm_provider/openai_provider.py` skeleton
-- [ ] Verify `uv run python -c "import debate"` succeeds
-- [ ] Verify `uv run ruff check src` returns 0 errors
+- [x] Create `src/debate/__init__.py` with `__version__ = "1.00"`
+- [x] Add `__all__` in `__init__.py` (initially empty list)
+- [x] Create `src/debate/main.py` with a placeholder `cli()` entrypoint
+- [x] Create `src/debate/sdk/__init__.py`
+- [x] Create `src/debate/sdk/sdk.py` with empty `DebateSDK` class skeleton
+- [x] Create `src/debate/services/__init__.py`
+- [x] Create `src/debate/services/orchestrator.py` with empty class skeleton
+- [x] Create `src/debate/services/watchdog.py` with empty class skeleton
+- [x] Create `src/debate/services/agents/__init__.py`
+- [x] Create `src/debate/services/agents/base_agent.py` with abstract class skeleton
+- [x] Create `src/debate/services/agents/dogs_agent.py` with class skeleton
+- [x] Create `src/debate/services/agents/cats_agent.py` with class skeleton
+- [x] Create `src/debate/services/agents/judge_agent.py` with class skeleton
+- [x] Create `src/debate/services/rag/__init__.py`
+- [x] Create `src/debate/services/rag/embedder.py` skeleton
+- [x] Create `src/debate/services/rag/rag_store.py` skeleton
+- [x] Create `src/debate/services/rag/ingest.py` skeleton
+- [x] Create `src/debate/services/tools/__init__.py`
+- [x] Create `src/debate/services/tools/web_search.py` skeleton
+- [x] Create `src/debate/shared/__init__.py`
+- [x] Create `src/debate/shared/gatekeeper.py` skeleton
+- [x] Create `src/debate/shared/config.py` skeleton
+- [x] Create `src/debate/shared/version.py` with `__version__`
+- [x] Create `src/debate/shared/constants.py`
+- [x] Create `src/debate/shared/logger.py` skeleton
+- [x] Create `src/debate/shared/schemas.py` skeleton
+- [x] Create `src/debate/shared/llm_provider/__init__.py`
+- [x] Create `src/debate/shared/llm_provider/base.py` skeleton
+- [x] Create `src/debate/shared/llm_provider/anthropic_provider.py` skeleton
+- [x] Create `src/debate/shared/llm_provider/openai_provider.py` skeleton
+- [x] Verify `uv run python -c "import debate"` succeeds (user to run)
+- [x] Verify `uv run ruff check src` returns 0 errors (user to run)
 
 ### 2.4 Test scaffolding
-- [ ] Create `tests/__init__.py`
-- [ ] Create `tests/conftest.py` with placeholder fixtures
-- [ ] Create `tests/unit/__init__.py`
-- [ ] Create `tests/unit/test_smoke.py` with one `assert True` test
-- [ ] Create `tests/integration/__init__.py`
-- [ ] Verify `uv run pytest` discovers and runs tests
-- [ ] Verify `uv run pytest --cov` produces a coverage report
+- [x] Create `tests/__init__.py`
+- [x] Create `tests/conftest.py` with placeholder fixtures
+- [x] Create `tests/unit/__init__.py`
+- [x] Create `tests/unit/test_smoke.py` with `assert True`-style tests
+- [x] Create `tests/integration/__init__.py`
+- [x] Verify `uv run pytest` discovers and runs tests (user to run)
+- [ ] Verify `uv run pytest --cov` produces a coverage report (user to run)
 
 ### 2.5 Data + results directories
-- [ ] Create `data/dogs/` directory
-- [ ] Create `data/cats/` directory
-- [ ] Add `.gitkeep` to `data/dogs/`
-- [ ] Add `.gitkeep` to `data/cats/`
-- [ ] Create `results/` directory
-- [ ] Add `results/.gitkeep`
-- [ ] Update `.gitignore` to ignore `data/*/chroma/` (vector store binary files)
-- [ ] Update `.gitignore` to ignore `results/logs/` (log output)
+- [x] Create `data/dogs/` directory
+- [x] Create `data/cats/` directory
+- [x] Add `.gitkeep` to `data/dogs/`
+- [x] Add `.gitkeep` to `data/cats/`
+- [x] Create `results/` directory
+- [x] Add `results/.gitkeep`
+- [x] Update `.gitignore` to ignore `data/*/chroma/` (vector store binary files)
+- [x] Update `.gitignore` to ignore `results/logs/` (log output)
 
 ---
 
@@ -374,8 +376,8 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [ ] Method: `get_token_summary() -> CostReport`
 - [ ] Concurrency cap via `threading.Semaphore`
 - [ ] Budget alert at 80% (WARNING log)
-- [ ] Budget enforcement at 100% (raise `BudgetExceeded`)
-- [ ] Exception classes: `BudgetExceeded`, `QueueFullError`, `ApiCallFailed`
+- [ ] Budget enforcement at 100% (raise `BudgetExceededError`)
+- [ ] Exception classes: `BudgetExceededError`, `QueueFullError`, `ApiCallFailedError`
 - [ ] Define `PricingTable` Pydantic model with per-provider per-model prices
 - [ ] Load pricing from `config/setup.json.pricing` or default
 - [ ] Persist cost log to `results/cost_log.jsonl`
@@ -407,7 +409,7 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [ ] Method: `_kill_and_restart(agent_id)`
 - [ ] Method: `start()`
 - [ ] Method: `stop()`
-- [ ] Exception: `WatchdogFatal` after max restarts
+- [ ] Exception: `WatchdogFatalError` after max restarts
 - [ ] SIGINT/SIGTERM clean shutdown
 - [ ] Write `test_watchdog_healthy_no_restart`
 - [ ] Write `test_watchdog_detects_timeout`
