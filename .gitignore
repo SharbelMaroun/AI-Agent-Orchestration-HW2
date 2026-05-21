@@ -27,3 +27,9 @@ Thumbs.db
 
 # Claude personal settings
 .claude/settings.local.json
+
+# RAG vector store binaries (regenerated from data/<agent>/*.txt)
+data/*/chroma/
+
+# Runtime log output (regenerated on every run)
+results/logs/

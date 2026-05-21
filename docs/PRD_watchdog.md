@@ -49,7 +49,7 @@ On timeout:
   "max_restarts_per_agent": 3
 }
 ```
-After `max_restarts_per_agent` exceeded → log `AGENT_DEAD`, raise `WatchdogFatal`, orchestrator gracefully aborts the debate and writes a partial verdict.
+After `max_restarts_per_agent` exceeded → log `AGENT_DEAD`, raise `WatchdogFatalError`, orchestrator gracefully aborts the debate and writes a partial verdict.
 
 ## 7. Acceptance criteria
 - A deliberately hung child process (sleep > kill_after_seconds) is detected and restarted within 2 × heartbeat_seconds of timeout.
@@ -60,7 +60,7 @@ After `max_restarts_per_agent` exceeded → log `AGENT_DEAD`, raise `WatchdogFat
 ## 8. Test scenarios
 - **Healthy run:** all agents heartbeat normally → 0 restarts, 0 warnings.
 - **Single hang:** force the Dogs agent to sleep 200s mid-round → watchdog kills and restarts; debate completes.
-- **Repeated hang:** agent hangs 4 times → after 3rd restart, raise `WatchdogFatal`.
+- **Repeated hang:** agent hangs 4 times → after 3rd restart, raise `WatchdogFatalError`.
 - **Clean shutdown:** SIGINT to parent → watchdog stops cleanly, children terminated, no zombies.
 - **Crashed child:** child raises uncaught exception → watchdog detects via missed heartbeat → restart.
 

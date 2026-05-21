@@ -2,6 +2,27 @@
 
 Condensed from `software_submission_guidelines-V3_Summary.md` (Dr. Yoram Segal, v3.00). All rules below are **mandatory** unless marked otherwise.
 
+---
+
+## 🚨 NON-NEGOTIABLES — READ FIRST EVERY TURN
+
+These rules are the most common drift points. Before claiming any chunk of work is "done":
+
+1. **Update `docs/TODO.md`** — mark every completed task with `[x]`. Add new tasks discovered during work.
+2. **Update `README.md`** — both the user-manual sections AND the homework-report sections. Stale README = lost points.
+3. **Update `docs/PROMPTS.md`** — log every significant prompt iteration or design decision with date, context, goal, result, lesson.
+4. **No file > 150 LOC** (code files only; excludes blank + comment lines).
+5. **No hardcoded values** — everything in `config/` or env vars. See §8.
+6. **No secrets in repo** — only `.env.example`, never `.env`. See §9.
+7. **Tests ≥ 85% coverage** (`pytest --cov fail_under = 85`). See §6.
+8. **Ruff = 0 violations** (`ruff check`). See §7.
+9. **All API calls through Gatekeeper** — no direct LLM/search/embedding call outside it. See §5.
+10. **`uv` only** — never `pip`, `venv`, `virtualenv`, `python -m pip`. See §11.
+
+**Failure mode to watch for:** finishing a chunk of code without updating TODO + README + PROMPTS. After every `Write` or `Edit` to code/config, ask: *"Which of these three docs changed because of this edit?"*
+
+---
+
 ## Homework-specific spec (auto-loaded each session)
 
 Follow the project spec in @docs/PRD.md and architecture in @docs/PLAN.md.
@@ -51,7 +72,27 @@ project-root/
 ## 2. Required Documents
 
 ### `README.md` must include
-Installation steps · usage (modes/flags/CLI/GUI) · examples & screenshots · configuration guide · contribution guidelines · license & credits.
+`README.md` is **both the user manual and the homework report**. It must contain:
+
+**User manual section:**
+- Installation steps · usage (modes/flags/CLI/GUI) · configuration guide · contribution guidelines · license & credits.
+
+**Homework report section:**
+- **Authors:** both partners' full names + GitHub handles + emails clearly displayed at the top of the report. For this project: Sharbel Maroun (@SharbelMaroun) and Amr Safadi.
+- **Submitted to:** Dr. Yoram Segal, course name, date.
+- Project summary and goals (what we built and why).
+- Architecture overview with diagram (link to or embed from `docs/PLAN.md`).
+- Key design decisions (link to ADRs).
+- Stage 1 deliverable — manual debate transcript with screenshots.
+- Sample end-to-end run output — full debate transcript + judge verdict.
+- Cost analysis table (Table 4 from §11 of the source PDF): tokens per model + dollar cost.
+- Optimization strategies used (caching, model choice, ping limits).
+- Lessons learned and reflections from prompt engineering.
+- Screenshots of every screen/state (terminal menu, mid-debate, verdict, cost report).
+- Known limitations and out-of-scope items.
+- Troubleshooting section.
+
+**Update rule:** `README.md` must be kept current as work progresses — just like `docs/TODO.md`. Every time a new feature lands, a new screenshot is captured, a new debate is run, or a design decision shifts, `README.md` must be updated in the same commit. Stale README = failed grading on "documentation freshness."
 
 ### `docs/PRD.md`
 Project overview, user problem, target audience · measurable goals + KPIs + acceptance criteria · functional & non-functional requirements + user stories · assumptions/dependencies/out-of-scope · timeline & milestones.
@@ -72,8 +113,9 @@ For every algorithm, ML model, auth mechanism, search engine, caching, etc. Incl
 3. Write `docs/TODO.md`
 4. Write specialized PRDs for each algorithm/mechanism
 5. Approve all docs **before** coding
-6. Develop while updating `TODO.md`
-7. Save results, create visualizations, update `README.md`
+6. Develop while updating `TODO.md` **and `README.md`** every commit (mark tasks complete; add/update report sections as features land).
+7. Save results, create visualizations, capture screenshots, and update `README.md` (both the user manual AND the homework report sections).
+8. Keep `docs/PROMPTS.md` updated with every significant prompt iteration.
 
 ## 4. Code Rules
 
