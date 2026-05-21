@@ -242,27 +242,27 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] Write `test_config_rejects_wrong_version`
 - [x] Write `test_config_missing_file_raises`
 
-### 3.3 LLM Provider abstraction
-- [ ] Define `LLMProvider` ABC in `base.py`
-- [ ] Define `CompletionResponse` (already in schemas, re-export)
-- [ ] Implement `AnthropicProvider.complete(...)`
-- [ ] Implement `AnthropicProvider` token field mapping from `response.usage`
-- [ ] Implement `AnthropicProvider` cache_control marking on system + first messages
-- [ ] Implement `AnthropicProvider` raise on missing `ANTHROPIC_API_KEY`
-- [ ] Implement `OpenAIProvider.complete(...)`
-- [ ] Implement `OpenAIProvider` system-prompt-as-first-message conversion
-- [ ] Implement `OpenAIProvider` token field mapping (prompt_tokens / completion_tokens)
-- [ ] Implement `OpenAIProvider` raise on missing `OPENAI_API_KEY`
-- [ ] Implement `build_provider(name) -> LLMProvider` factory
-- [ ] Implement provider registry (dict of name → class)
-- [ ] Write `test_provider_registry_known`
-- [ ] Write `test_provider_registry_unknown_raises`
-- [ ] Write `test_anthropic_provider_mock_call` (mocked SDK)
-- [ ] Write `test_anthropic_provider_token_extraction`
-- [ ] Write `test_anthropic_provider_cache_headers_set`
-- [ ] Write `test_openai_provider_mock_call`
-- [ ] Write `test_openai_provider_token_extraction`
-- [ ] Write `test_provider_missing_env_var_raises`
+### 3.3 LLM Provider abstraction ✅
+- [x] Define `LLMProvider` ABC in `base.py`
+- [x] Define `CompletionResponse` (already in schemas, re-export)
+- [x] Implement `AnthropicProvider.complete(...)`
+- [x] Implement `AnthropicProvider` token field mapping from `response.usage`
+- [x] Implement `AnthropicProvider` cache_control marking on system + first messages
+- [x] Implement `AnthropicProvider` raise on missing `ANTHROPIC_API_KEY`
+- [x] Implement `OpenAIProvider.complete(...)`
+- [x] Implement `OpenAIProvider` system-prompt-as-first-message conversion
+- [x] Implement `OpenAIProvider` token field mapping (prompt_tokens / completion_tokens)
+- [x] Implement `OpenAIProvider` raise on missing `OPENAI_API_KEY`
+- [x] Implement `build_provider(name) -> LLMProvider` factory
+- [x] Implement provider registry (dict of name → class)
+- [x] Write `test_provider_registry_known`
+- [x] Write `test_provider_registry_unknown_raises`
+- [x] Write `test_anthropic_provider_mock_call` (mocked SDK)
+- [x] Write `test_anthropic_provider_token_extraction`
+- [x] Write `test_anthropic_provider_cache_headers_set`
+- [x] Write `test_openai_provider_mock_call`
+- [x] Write `test_openai_provider_token_extraction`
+- [x] Write `test_provider_missing_env_var_raises`
 
 ### 3.4 Base agent (`agents/base_agent.py`)
 - [ ] Define `BaseAgent` ABC

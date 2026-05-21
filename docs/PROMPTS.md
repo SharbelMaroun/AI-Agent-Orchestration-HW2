@@ -89,6 +89,20 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-21 — Phase 3.3: LLM provider abstraction
+
+**Context:** Per ADR-009 each agent picks its `provider` + `model` from `config/setup.json`. Concrete provider code must register itself centrally so adding a third vendor later is a one-line change rather than a hunt-and-replace across agents.
+**Goal:** Implement `LLMProvider` ABC + registry, `AnthropicProvider`, `OpenAIProvider`, with mocked-SDK tests that exercise both happy path and missing-env-var failure modes.
+**Decisions:**
+  1. **Registry pattern**: `base.py` exposes a module-level `_REGISTRY: dict[str, type[LLMProvider]]`. Each provider module ends with `register(NAME, ProviderClass)`. The package `__init__.py` imports both provider modules so registration is a side-effect of `from debate.shared.llm_provider import build_provider`.
+  2. **Local SDK imports**: `import anthropic` and `import openai` happen inside `__init__`, not at module top. Two reasons: (a) the SDKs only matter when the provider is actually instantiated, so tests for *other* providers don't pay the import cost; (b) it makes `sys.modules`-injection mocking trivial for the optional `openai` extra.
+  3. **Anthropic cache markers on system + first user only**: per Anthropic docs the cache covers "everything up to and including" the marked block. Two markers = the system prompt caches durably, the first user turn caches per-conversation, and later turns stay cheap.
+  4. **Optional `openai` extra**: the `openai` package is an optional extra in `pyproject.toml`, so the test injects a stub `openai` module via `sys.modules` rather than requiring the extra to be installed. Keeps the default test environment lean.
+**Result:** 11 new tests (28 total, all green); ruff 0 violations; every file in `llm_provider/` under 80 LOC.
+**Lesson:** Side-effect registration in `__init__.py` is fine when the side effect is local (registering yourself in a private registry). It becomes harmful when the side effect touches global state the caller can't see — keep the line between "pull-by-name factory" (good) and "spooky action at a distance" (bad) explicit in comments.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
