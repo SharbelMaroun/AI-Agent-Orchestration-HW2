@@ -2,6 +2,11 @@
 
 Condensed from `software_submission_guidelines-V3_Summary.md` (Dr. Yoram Segal, v3.00). All rules below are **mandatory** unless marked otherwise.
 
+## Homework-specific spec (auto-loaded each session)
+
+Follow the project spec in @docs/PRD.md and architecture in @docs/PLAN.md.
+Per-mechanism details: @docs/PRD_judge.md, @docs/PRD_dogs.md, @docs/PRD_cats.md, @docs/PRD_gatekeeper.md, @docs/PRD_rag.md, @docs/PRD_watchdog.md.
+
 ---
 
 ## 1. Mandatory Project Structure
@@ -56,6 +61,7 @@ C4 Model diagrams (Context/Container/Component/Code) · UML for complex processe
 
 ### `docs/TODO.md`
 Tasks with priority + status (Not Started / In Progress / Completed) · phases & milestones · responsibility per task · Definition of Done.
+**Granularity: 500–700 tasks total.** Each task must be small and atomic (one concrete deliverable — a single file, function, test, config entry, doc section, or screenshot). Break large work into many fine-grained tasks rather than a few coarse ones.
 
 ### Per-mechanism PRDs (`docs/PRD_<name>.md`)
 For every algorithm, ML model, auth mechanism, search engine, caching, etc. Include theoretical background, I/O spec, performance metrics, constraints, alternatives considered, success criteria, test scenarios.
