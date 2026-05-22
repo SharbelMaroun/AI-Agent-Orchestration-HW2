@@ -1,0 +1,7 @@
+---
+source: U.S. National Police Canine Association reports
+type: statistic
+relevance: working, police, public_safety
+---
+
+Police K-9 units exist in nearly every major municipal police department in the United States and most modern police forces worldwide. A single trained narcotics-detection dog can screen a vehicle in under two minutes with greater accuracy than electronic detectors costing twenty times more. The National Police Canine Association estimates that working K-9 teams are involved in the apprehension of approximately 14,000 violent felony suspects annually in the U.S. alone. Explosive-detection dogs deployed at airports, border crossings, and stadiums have an empirical false-negative rate below 5%, a standard no current chemical sensor has matched at comparable throughput. The training pipeline for a single police K-9 costs roughly $30,000 and takes 12 to 18 months, but the operational value of one working dog over a six-to-eight-year career is conservatively estimated by police budgeting analyses at over $1 million in equivalent equipment and labor. No other companion species has been trained to perform this category of work at scale. The reason is not historical accident — it is biological irreplaceability.

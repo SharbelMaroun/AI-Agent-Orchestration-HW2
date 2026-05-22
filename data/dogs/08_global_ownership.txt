@@ -1,0 +1,7 @@
+---
+source: GfK Global Pet Ownership Survey, 2016
+type: statistic
+relevance: prevalence, culture, global
+---
+
+A 2016 GfK survey of 22 countries found dogs to be the world's most popular pet, present in 33% of households globally, with cats trailing at 23%. The pattern holds across every continent. In Argentina, dog ownership reaches 66% of households; in Mexico, 64%; in Brazil, 58%. Even in countries with cultural reservations about pet-keeping, dogs remain the most common companion animal where any pets are kept. The American Pet Products Association reports that 65 million U.S. households own dogs, compared to 47 million cat-owning households. Globally, the dog population is estimated at 900 million, with roughly 470 million kept as household pets. The remaining 430 million are working dogs (herding, guarding, search-and-rescue, military, police, service) or free-ranging community dogs. No other companion species supports such a wide range of working roles alongside its companion function. The numbers reflect not marketing or fashion but a sustained, universal human preference across centuries and continents.

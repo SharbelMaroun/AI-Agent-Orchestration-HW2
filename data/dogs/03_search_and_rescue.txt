@@ -1,0 +1,7 @@
+---
+source: FEMA Urban Search and Rescue program records
+type: statistic
+relevance: working, rescue, utility
+---
+
+The Federal Emergency Management Agency's Urban Search and Rescue program certifies approximately 250 canine teams nationally. A single trained search dog can clear an area roughly equivalent to thirty human searchers in the same time, with greater accuracy in collapsed-structure scenarios. Following the 1995 Oklahoma City bombing, the 2001 World Trade Center attack, and the 2010 Haiti earthquake, search-and-rescue dogs located survivors that electronic equipment and human responders had repeatedly missed. The canine olfactory system contains roughly 300 million scent receptors, compared to about six million in humans, and a dedicated region of a dog's brain devoted to processing smell that is forty times larger by proportion than its human equivalent. This biological capability is currently irreplaceable: no electronic sensor has matched a trained dog's combination of sensitivity, mobility, and the ability to discriminate one human scent from background contamination. Disaster response programs in over fifty countries now treat search-and-rescue dogs as essential first-responder equipment.

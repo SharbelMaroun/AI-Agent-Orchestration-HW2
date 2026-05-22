@@ -1,0 +1,7 @@
+---
+source: Levine et al., Circulation, 2013 (AHA Scientific Statement)
+type: quote
+relevance: heart, scientific_consensus, public_health
+---
+
+In 2013 the American Heart Association published a formal Scientific Statement titled "Pet Ownership and Cardiovascular Risk." The expert panel reviewed the cumulative evidence and concluded: "Pet ownership, particularly dog ownership, is probably associated with decreased CVD risk." The statement was unusual for the AHA, which rarely endorses lifestyle interventions that aren't clinical medications. It was issued because the evidence base — including randomized trials, large cohort studies, and physiological mechanism studies — had reached a threshold the panel considered credible. The statement listed specific mechanisms: increased physical activity, reduced sympathetic nervous system arousal, improved lipid profiles, reduced obesity rates, lower blood pressure, and an attenuated stress response to acute psychological stressors. Notably, the panel found stronger evidence for dog ownership than for cat ownership, citing the activity pathway as a primary mediator. For the first time, a major U.S. medical society effectively endorsed a companion-animal species as a contributor to cardiovascular health.

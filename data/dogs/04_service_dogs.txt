@@ -1,0 +1,7 @@
+---
+source: Assistance Dogs International, Wells 2019
+type: study
+relevance: disability, service, mental_health
+---
+
+Service dogs have transformed independent living for people with disabilities. Guide dogs for the visually impaired have been formally trained since the 1920s; today, programs train dogs to detect imminent seizures up to forty-five minutes before onset, alert diabetic owners to dangerous blood sugar levels by scent, retrieve dropped objects for wheelchair users, and interrupt PTSD nightmares for combat veterans. A 2019 meta-analysis published in Animal Frontiers reviewed twenty-seven studies of psychiatric service dogs for veterans and found significant reductions in PTSD symptom severity, depression scores, and suicidal ideation in dog-paired participants compared to control groups receiving standard care alone. The Americans with Disabilities Act recognizes service dogs as medical equipment, granting them access to spaces that bar all other animals. No other companion species has been trained to perform comparable diagnostic and assistive tasks at scale. The combination of trainability, intelligence, and species-level willingness to bond with humans makes dogs uniquely suited to this role.

@@ -35,14 +35,14 @@ The Judge moderates all communication (no direct Pro ↔ Con). Each agent mainta
 | 2 | Project bootstrap | ✅ Complete |
 | 3 | Core code (schemas, providers, agents, orchestrator, SDK) | ✅ Complete — all 10 sub-phases (schemas, config, providers, BaseAgent, DebateAgent, DogsAgent, CatsAgent, JudgeAgent, Orchestrator, SDK) |
 | 4 | Engineering (gatekeeper, watchdog, logger, search) | ✅ Complete — 4.1 gatekeeper, 4.2 watchdog, 4.3 logger, 4.4 web search, 4.5 constants |
-| 5 | RAG | ⬜ Not started |
-| 6 | Tests + coverage ≥ 85% | ⬜ Not started |
+| 5 | RAG | ✅ Complete — embedder, ChromaDB store, ingest CLI, 30 curated passages (15 dogs + 15 cats), agent wiring |
+| 6 | Tests + coverage ≥ 85% | ✅ Complete — 165 tests · **96.26% coverage** · integration suite · justfile |
 | 7 | Polish (CLI menu, README full report, notebook) | ⬜ Not started |
 | 8 | Submission | ⬜ Not started |
 
 See `docs/TODO.md` for the full ~560-task breakdown.
 
-**Current test snapshot (2026-05-22, Phase 3 + Phase 4 complete):** 127 unit tests pass · ruff 0 violations · every file ≤ 150 LOC · `DebateSDK().run_debate()` produces a full `DebateResult` end-to-end with mocked LLMs · `ApiGatekeeper` enforces rolling-window rate limits, retries with backoff, FIFO backpressure, cost tracking with Anthropic cache pricing, and budget warning + hard-limit alerts · `Watchdog` detects heartbeat timeouts and restarts hung agents (raises `WatchdogFatalError` after `max_restarts_per_agent`) · `WebSearch` routes DuckDuckGo queries through the gatekeeper's `search` service. Coverage gate stays deferred to Phase 6 per `docs/PROMPTS.md` until Phase 5 (RAG) lands.
+**Current test snapshot (2026-05-22, Phase 3 + 4 + 5 + 6 complete):** 165 tests pass (156 unit + 9 integration) · **96.26% coverage** (gate is 85%) · ruff 0 violations · every code file ≤ 150 LOC · `DebateSDK().run_debate()` produces a full `DebateResult` end-to-end with mocked LLMs · `ApiGatekeeper` enforces rolling-window rate limits, retries with backoff, FIFO backpressure, cost tracking with Anthropic cache pricing, and budget warning + hard-limit alerts · `Watchdog` detects heartbeat timeouts and restarts hung agents · `WebSearch` routes DuckDuckGo queries through the gatekeeper's `search` service · `RAGStore` (ChromaDB persistent) and `Embedder` (sentence-transformers/all-MiniLM-L6-v2) back a curated corpus of 30 passages (15 logos-heavy for Dogs, 15 pathos-heavy for Cats) ingested by `uv run python -m debate.services.rag.ingest --agent {dogs,cats}` · `justfile` provides `just test / lint / cov / run / ingest / ci`.
 
 **Deferred from Phase 3.9 (tracked in `docs/TODO.md`):** the Orchestrator runs synchronously; `multiprocessing.Process` wrapping and SIGINT/SIGTERM handling land alongside the Watchdog in Phase 4.
 

@@ -1,0 +1,7 @@
+---
+source: Mubanga et al., Scientific Reports, 2017
+type: study
+relevance: longevity, mortality, cardiovascular
+---
+
+A large Swedish cohort study followed 3.4 million adults aged 40 to 80 over a twelve-year period and found that dog owners had a measurably lower risk of cardiovascular disease and a lower risk of all-cause mortality compared to non-owners. The effect was most pronounced among single-person households, where dog ownership was associated with a 33% lower risk of death from any cause and an 11% lower risk of myocardial infarction. The researchers attributed the effect to increased physical activity from daily walks, lower stress levels from companionship, and the protective effects of being needed by another living creature. Notably, owners of breeds originally developed for hunting showed the strongest protective effect, suggesting an exercise pathway. The Swedish registry data is unusually robust because dog ownership in Sweden is legally required to be registered, eliminating the self-reporting bias that weakens most companion-animal studies. The authors concluded that the cardiovascular and longevity benefits of dog ownership are real and clinically meaningful.

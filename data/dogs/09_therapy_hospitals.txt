@@ -1,0 +1,7 @@
+---
+source: Marcus et al., Pain Medicine, 2013
+type: study
+relevance: therapy, hospitals, pain
+---
+
+Animal-assisted therapy programs deploy trained therapy dogs in over 90% of major U.S. children's hospitals. A 2013 study at the Mayo Clinic's pain clinic found that a single 15-minute visit from a therapy dog reduced patient-reported pain scores by an average of 23%, anxiety by 28%, and emotional distress by 31% — effects comparable to mild analgesics, with no pharmacological side effects. Therapy dogs are now standard in hospice care, in courtroom settings for child witnesses, in airports during high-stress travel periods, and in university libraries during exam weeks. The mechanism is well documented: petting a dog measurably lowers cortisol, raises oxytocin, and reduces sympathetic nervous system arousal within minutes. Cats have been trialed in similar roles but show inconsistent results because feline temperament is more variable across individuals and most cats do not tolerate the unpredictable environment of a hospital ward. The therapeutic infrastructure built around dogs reflects a measurable, replicated clinical effect, not sentimentality.
