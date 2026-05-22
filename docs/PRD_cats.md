@@ -1,6 +1,7 @@
 # PRD — Cats Agent
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Side: `cats` · Style: **pathos + Socratic**
+**Status:** Implemented Phase 3.7. System prompt at `prompts/cats_system_prompt.md`; RAG corpus at `data/cats/*.txt` (15 passages, max 196 words each).
 
 ---
 

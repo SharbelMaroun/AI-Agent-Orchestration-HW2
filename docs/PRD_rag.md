@@ -1,6 +1,7 @@
 # PRD — RAG (Retrieval-Augmented Generation)
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Optional per spec, **included** in this project.
+**Status:** Implemented Phase 5. Two implementation notes worth flagging — see end of §3.1 and §3.4.
 
 ---
 
@@ -18,6 +19,7 @@ Give the Dogs and Cats agents access to a small, curated **private knowledge bas
 - **ChromaDB** in persistent local mode at `data/<agent>/chroma/`.
 - One collection per agent: `dogs`, `cats`.
 - Judge has **no** RAG (must remain neutral).
+- **Implementation note:** ChromaDB rejects empty metadata dicts (`{}`). `RAGStore.add` substitutes `{"_": "_"}` for any missing/empty metadata so callers don't need to know about that quirk. Documented inline in `rag_store.py`.
 
 ### 3.2 Embedder
 - **`sentence-transformers/all-MiniLM-L6-v2`** — 384-dim, CPU-only, free.
@@ -38,8 +40,9 @@ relevance: <comma-separated tags>
 ### 3.4 Ingestion (one-time)
 - Script: `services/rag/ingest.py`.
 - Reads all `.txt` files in the corpus folder, parses frontmatter, chunks by paragraph (max `chunk_size` words from `setup.json`), embeds, stores in ChromaDB with metadata.
-- Idempotent: re-running skips already-ingested chunks (keyed by file path + chunk index hash).
-- Run as: `uv run python -m debate.services.rag.ingest --agent dogs`.
+- Idempotent: re-running skips already-ingested chunks (keyed by sha1 of `file.name:chunk_index`, truncated to 16 chars).
+- Run as: `uv run python -m debate.services.rag.ingest --agent dogs` (or via `just ingest-dogs` / `just ingest-cats` / `just ingest`).
+- **Implementation note:** YAML frontmatter is parsed by a small `key: value` line parser rather than PyYAML — keeps the dependency footprint smaller and surfaces frontmatter authoring mistakes immediately. The shape is the same as PyYAML would accept for flat key/value documents.
 
 ### 3.5 Retrieval
 - API: `RAGStore.retrieve(query: str, k: int = 3) -> list[Passage]`.

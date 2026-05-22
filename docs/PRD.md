@@ -1,8 +1,8 @@
 # Product Requirements Document — AI Agent Debate (HW2)
 
 **Project:** AI-Agent-Orchestration-HW2 · **Topic:** Cats vs Dogs as the better pet
-**Version:** 1.00 · **Status:** Draft
-**Authors:** Sharbel Maroun + partner
+**Version:** 1.00 · **Status:** Approved (spec stable; mid-implementation deltas tracked in `docs/TODO.md`)
+**Authors:** Sharbel Maroun + Amr Safadi
 
 ---
 
@@ -192,15 +192,17 @@ Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A commit
 
 ## 6. Phases & Timeline
 
-| Phase | Deliverable | Status |
-|---|---|---|
-| 0 | Docs (this PRD + PLAN + per-mechanism PRDs) | In progress |
-| 1 | Manual debate (two Claude CLI windows by hand, full transcript captured) | Not started |
-| 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | Not started |
-| 3 | Add gatekeeper + watchdog + FIFO logs + tests | Not started |
-| 4 | Add RAG to Pro and Con | Not started |
-| 5 | Polish: terminal menu, README screenshots, analysis notebook, cost report | Not started |
-| 6 | Submission: pyproject.toml clean, public repo, Moodle PDF | Not started |
+PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md` for the ~600-task breakdown and per-sub-phase status.
+
+| Phase | Deliverable | TODO phases | Status |
+|---|---|---|---|
+| 0 | Docs (this PRD + PLAN + per-mechanism PRDs + TODO + PROMPTS) | TODO Phase 0 | ✅ Complete |
+| 1 | Manual debate (two Claude CLI windows by hand, full transcript captured) | TODO Phase 1 | ⬜ Not started — partner-runnable |
+| 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | TODO Phase 2 + 3 | ✅ Complete |
+| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (165 tests · 96.26% coverage) |
+| 4 | Add RAG to Pro and Con | TODO Phase 5 | ✅ Complete (30 curated passages, ChromaDB persistent) |
+| 5 | Polish: terminal menu, README screenshots, analysis notebook, cost report | TODO Phase 7 | ⬜ Not started |
+| 6 | Submission: pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ⬜ Not started |
 
 ---
 

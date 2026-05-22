@@ -1,6 +1,7 @@
 # PRD — Dogs Agent
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Side: `dogs` · Style: **logos + ethos**
+**Status:** Implemented Phase 3.6. System prompt at `prompts/dogs_system_prompt.md`; RAG corpus at `data/dogs/*.txt` (15 passages, max 192 words each).
 
 ---
 

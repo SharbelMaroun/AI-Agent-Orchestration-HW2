@@ -1,6 +1,12 @@
 # Architecture & Design Plan (PLAN)
 
-**Version:** 1.00 · **Status:** Draft · References: `docs/PRD.md`
+**Version:** 1.00 · **Status:** Approved (ADRs final; implementation deltas noted inline below) · References: `docs/PRD.md`
+
+> **Implementation deltas vs. this PLAN (as of Phase 6 close):**
+> - `ApiGatekeeper` is implemented as three sibling modules under `src/debate/shared/` (`gatekeeper.py` — the policy class, `rate_limiter.py` — `RollingWindow`/`ServiceState`/`is_retryable`/exceptions/`QueueStatus`, and `pricing.py` — `compute_cost`/`CostTracker`). The split exists to keep `gatekeeper.py` ≤ 150 LOC per CLAUDE.md §4; the public contract is unchanged.
+> - `Orchestrator` runs synchronously in a single process for Phase 3+. `multiprocessing.Process` spawning, SIGINT/SIGTERM handling, and the heartbeat queue are deferred until the manual-test path (Phase 1) is captured — see PRD_watchdog §9 and TODO §3.9 deferred items.
+> - `RAGStore.add` substitutes `{"_":"_"}` for empty metadata dicts (ChromaDB rejects `{}`). Documented in `PRD_rag.md` §3.1.
+> - `DebateSDK` default `gatekeeper=_PassthroughGatekeeper`; production code wires `ApiGatekeeper` once Phase 7 polish lands the real config-driven construction.
 
 ---
 
@@ -361,7 +367,34 @@ Single-machine: parent Python process forks 3 children (Pro, Con, Judge). Each c
 
 The Judge is the parent's direct child but does **not** spawn Pro/Con — the Orchestrator (in the main process) spawns all three.
 
-## 9. Open Questions
-1. **Which web search package** — `duckduckgo-search` vs `tavily-python` (free tier)? Decision deferred to Phase 2 spike.
-2. **RAG corpus assembly** — manual curation (15–20 hand-picked passages per side) vs. automated scraping. Recommend manual for Stage 4 to control quality.
-3. **Pair partner's role** — who codes which module? Resolve before Phase 2.
+## 9. Open Questions — Resolved
+1. **Web search package** — Resolved: `duckduckgo-search` selected (Phase 4.4). `WebSearch.backend` is injectable so a Tavily fallback can drop in later behind a feature flag if DDG rate-limits us during real runs; not built yet.
+2. **RAG corpus assembly** — Resolved: manual curation. 15 hand-picked passages per side, max 196 words each, with YAML frontmatter. Files committed under `data/dogs/*.txt` and `data/cats/*.txt`.
+3. **Pair partner's role** — Resolved out-of-band: Sharbel owns the implementation pipeline; Amr owns the Phase 1 manual debate transcript and Phase 7 polish artifacts (screenshots, cost analysis table).
+
+## 10. Module Map (as built)
+
+Single-process layout at Phase 6 close. File sizes are non-blank, non-comment LOC; all under the 150-LOC cap.
+
+| Module | LOC | Purpose |
+|---|---|---|
+| `src/debate/sdk/sdk.py` | ~80 | Sole public entry — wires agents to the orchestrator |
+| `src/debate/services/orchestrator.py` | ~95 | Synchronous round loop; persists `DebateResult` JSON |
+| `src/debate/services/agents/base_agent.py` | ~50 | Generation routed through gatekeeper; envelope dispatch |
+| `src/debate/services/agents/debate_agent.py` | ~95 | Evidence collection + JSON parse + clash validation |
+| `src/debate/services/agents/dogs_agent.py` | ~25 | logos/ethos persona + authority-keyword search bias |
+| `src/debate/services/agents/cats_agent.py` | ~25 | pathos/Socratic persona + literary-keyword search bias |
+| `src/debate/services/agents/judge_agent.py` | ~110 | 5-dim rubric scoring + verdict + tie-break + collusion detection |
+| `src/debate/services/watchdog.py` | ~135 | Daemon-thread heartbeat monitor; check_once exposed for tests |
+| `src/debate/services/tools/web_search.py` | ~55 | DDG backend; routes through gatekeeper("search") |
+| `src/debate/services/rag/embedder.py` | ~35 | sentence-transformers wrapper, class-level cache |
+| `src/debate/services/rag/rag_store.py` | ~75 | ChromaDB persistent client; `Passage` Pydantic model |
+| `src/debate/services/rag/ingest.py` | ~75 | YAML-frontmatter parser, word-chunker, sha1 IDs, idempotent insert |
+| `src/debate/shared/gatekeeper.py` | ~145 | `ApiGatekeeper` policy class |
+| `src/debate/shared/rate_limiter.py` | ~45 | `RollingWindow`, `ServiceState`, `is_retryable`, exceptions, `QueueStatus` |
+| `src/debate/shared/pricing.py` | ~75 | `compute_cost` (Anthropic cache multipliers) + `CostTracker` |
+| `src/debate/shared/logger.py` | ~110 | `FifoRotatingHandler`, `get_logger`, JSONL cost logger |
+| `src/debate/shared/schemas.py` | ~95 | Pydantic message envelopes + Ping/Score/Verdict/DebateResult |
+| `src/debate/shared/config.py` | ~110 | `SetupConfig` / `RateLimitConfig` / `LoggingConfig` + loaders |
+| `src/debate/shared/llm_provider/*.py` | ~80 (total) | `LLMProvider` ABC + Anthropic + OpenAI + registry |
+| `src/debate/shared/constants.py` | ~16 | Side literals, MessageType enum, defaults |

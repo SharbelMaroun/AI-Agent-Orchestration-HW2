@@ -1,6 +1,7 @@
 # PRD — Judge Agent
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Style: neutral evaluator
+**Status:** Implemented Phase 3.8. Tie-break (clash → pathos) and concession-detection-forces-clash-0 both live in `judge_agent.py` and are tested in `tests/unit/test_judge_agent.py`.
 
 ---
 

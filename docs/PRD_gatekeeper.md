@@ -1,6 +1,7 @@
 # PRD — API Gatekeeper
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Source: `CLAUDE.md` §5
+**Status:** Implemented Phase 4.1. Class split into `gatekeeper.py` (policy) + `rate_limiter.py` (internals: `RollingWindow`, `ServiceState`, `is_retryable`, exceptions, `QueueStatus`) + `pricing.py` (`compute_cost`, `CostTracker`) to honor the 150-LOC cap. Public contract unchanged.
 
 ---
 
@@ -72,8 +73,8 @@ Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of b
 - Backoff: `retry_after_seconds × attempt_number`.
 - Max attempts from config (default 3). Final failure → raise `ApiCallFailedError`.
 
-## 9. Cybersecurity hook
-`execute()` accepts optional `sanitize: Callable[[str], str]` to clean prompts before sending (e.g., strip secrets from environment, mask emails). Default: no-op.
+## 9. Cybersecurity hook — Deferred
+**Status:** Not implemented in Phase 4.1. `execute()` does not yet accept a `sanitize` callable. The decision: until we have a documented incident class to defend against (PII leak, prompt-injection through search results, etc.), adding a no-op hook is dead weight. Will land when one of the following triggers: (a) we route real user input through the gatekeeper; (b) web-search results contain mixed user content we don't fully trust. Tracked as a deferred item in `docs/TODO.md` §4.1.
 
 ## 9a. Prompt caching (Anthropic)
 - Mark the system prompt and the first ~3 turns of conversation history with `cache_control: { type: "ephemeral" }` on every call.

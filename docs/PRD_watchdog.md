@@ -1,6 +1,7 @@
 # PRD — Watchdog
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Required by Lesson 05 ("Watchdog with keep-alive").
+**Status:** Implemented Phase 4.2 with one deferred sub-item — see §9 below.
 
 ---
 
@@ -64,10 +65,9 @@ After `max_restarts_per_agent` exceeded → log `AGENT_DEAD`, raise `WatchdogFat
 - **Clean shutdown:** SIGINT to parent → watchdog stops cleanly, children terminated, no zombies.
 - **Crashed child:** child raises uncaught exception → watchdog detects via missed heartbeat → restart.
 
-## 9. Implementation notes
-- Watchdog runs as a daemon **thread** in the parent process (not a separate process) — it must outlive any child.
-- Uses `threading.Lock` around the `last_seen` dict (mutated by main thread, read by watchdog thread).
-- Heartbeats during LLM calls are tricky — the child can't send heartbeats while blocked on a synchronous SDK call. Two options:
-  1. **Acceptable:** raise `kill_after_seconds` above the longest expected LLM call (e.g., 90s). Simpler.
-  2. **Better:** wrap LLM calls in a separate thread inside the child, with the main child thread heartbeating. Use only if option 1 produces false positives.
-  We default to option 1; revisit if needed.
+## 9. Implementation notes (as built)
+- Watchdog runs as a daemon **thread** in the parent process. ✅ implemented (`Watchdog._loop`).
+- Uses `threading.Lock` around the `_entries` dict (renamed from `last_seen` in implementation — entries now hold `last_seen` + `restart_count` + `restart_fn` + `process` + `fatal` flag). ✅ implemented.
+- Heartbeats during LLM calls: defaulted to option 1 (raise `kill_after_seconds` above the longest expected LLM call). Configured via `setup.json.timeouts.watchdog_kill_after_seconds = 90`. ✅ honored.
+- **Deferred:** SIGINT/SIGTERM clean-shutdown signal handling. The orchestrator currently runs synchronously in one process (no child processes yet), so the watchdog's `stop()` is invoked programmatically rather than via a signal handler. The signal-handler wiring lands together with the orchestrator's multi-process upgrade (TODO §4.2 deferred item).
+- **Beyond spec:** `Watchdog.check_once()` is exposed publicly so tests can drive the timeout-detection logic without spinning up the daemon thread. The loop is `while not stop: check_once(); sleep(poll)` — the unit-of-work seam used the same pattern as the gatekeeper's `sleep_fn` injection.
