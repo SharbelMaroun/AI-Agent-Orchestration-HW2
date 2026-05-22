@@ -736,7 +736,9 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] `uv sync` works (verified during dependency adds)
 - [ ] `.env.example` → `.env` with real key — partner step
 - [x] **Boot-path bug fix:** `DebateSDK.__init__` now calls `load_env(".env")` before any provider construction (was missing — caused "GOOGLE_API_KEY not set" on real-key runs; mocked tests masked it)
-- [x] **Strict-JSON bug fix:** `DebateAgent.handle_your_turn` auto-fills `refers_to_ping` from envelope context when the model omits it (surfaced when switching default to `gemini-2.5-flash-lite` — smaller models drop optional-looking fields; full rationale in `docs/PROMPTS.md` 2026-05-23 entry)
+- [x] **Strict-JSON bug fix:** `DebateAgent.handle_your_turn` auto-fills `refers_to_ping` from envelope context when the model omits it (surfaced when switching default to a Gemini flash-lite tier — smaller models drop optional-looking fields; full rationale in `docs/PROMPTS.md` 2026-05-23 entry)
+- [x] **Model upgrade:** default Gemini bumped from `gemini-2.5-flash-lite` to `gemini-3.1-flash-lite` (same pricing tier, newer model family — verified against the partner's other production app)
+- [x] **Provider switch:** default flipped from Gemini to OpenAI `gpt-4o-mini` for all three agents — Gemini free-tier 20 RPD cap was blocking a full 10-round debate; OpenAI has no daily-call cap, ~$0.02 per full debate at list price. `uv sync --extra openai` installs the SDK.
 - [x] `uv run pytest --cov` passes ≥ 85% (96.08% on Phase 8 sweep, 187 tests)
 - [x] `uv run ruff check .` passes 0 errors
 - [x] `uv run ruff format --check .` clean (after `ruff format .` applied in Phase 8 sweep)

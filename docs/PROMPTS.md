@@ -295,6 +295,24 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-23 — Model bump: gemini-3.1-flash-lite
+
+**Context:** Sharbel pointed out that his other production app uses `gemini-3.1-flash-lite` — a model name newer than this assistant's training-data cutoff. Took it at face value; the Google SDK passes the model name through to the API verbatim, and an invalid name surfaces as an API error immediately.
+**Change:** `config/setup.json.models` updated for all three agents; pricing table entry added (same tier as the previous `gemini-2.5-flash-lite`: $0.10 input / $0.40 output per million tokens — confirmed with Sharbel).
+**Lesson:** Trust the user's lived experience with their own production stack over your own model-family knowledge — your training data has a cutoff; theirs is current.
+
+---
+
+## 2026-05-23 — Provider switch: OpenAI gpt-4o-mini
+
+**Context:** Sharbel added `OPENAI_API_KEY` after Gemini's free-tier 20-RPD cap kept blocking the 41-call 10-round debate. Wanted to keep the cost low while actually getting through a real run.
+**Change:** All three agents flipped from `google/gemini-3.1-flash-lite` → `openai/gpt-4o-mini`. Pricing: $0.15 input / $0.60 output per million tokens — roughly $0.01–$0.02 for a full 10-round debate.
+**Why gpt-4o-mini specifically:** It's the practical sweet spot for this debate's structural-JSON-with-rhetoric workload. `gpt-4.1-nano` is slightly cheaper but produces weaker JSON adherence (we'd hit the same `refers_to_ping=None` class of bug we just patched for flash-lite). `gpt-4o` is 5× the price for verdict-quality reasoning the Judge probably doesn't need at this scale.
+**SDK install:** `uv sync --extra openai` (the openai package was an optional extra since Phase 2 — it ships disabled to keep the default install footprint smaller; activating it is one command).
+**Lesson:** Cap-style limits (Gemini's RPD) are worse for iterative testing than per-token pricing (OpenAI's). For a course project where you'll re-run the debate dozens of times, pick the provider with no daily cap even if the per-call price is higher.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
