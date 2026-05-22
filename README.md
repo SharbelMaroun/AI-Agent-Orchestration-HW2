@@ -34,7 +34,7 @@ The Judge moderates all communication (no direct Pro ↔ Con). Each agent mainta
 | 1 | Manual debate (Stage 1 transcript) | ⬜ Not started |
 | 2 | Project bootstrap | ✅ Complete |
 | 3 | Core code (schemas, providers, agents, orchestrator, SDK) | ✅ Complete — all 10 sub-phases (schemas, config, providers, BaseAgent, DebateAgent, DogsAgent, CatsAgent, JudgeAgent, Orchestrator, SDK) |
-| 4 | Engineering (gatekeeper, watchdog, logger, search) | ⬜ Not started |
+| 4 | Engineering (gatekeeper, watchdog, logger, search) | 🟨 In progress — 4.3 logger ✅ (FIFO rotation + JSONL cost log); 4.1 gatekeeper next |
 | 5 | RAG | ⬜ Not started |
 | 6 | Tests + coverage ≥ 85% | ⬜ Not started |
 | 7 | Polish (CLI menu, README full report, notebook) | ⬜ Not started |
@@ -42,7 +42,7 @@ The Judge moderates all communication (no direct Pro ↔ Con). Each agent mainta
 
 See `docs/TODO.md` for the full ~560-task breakdown.
 
-**Current test snapshot (2026-05-22, after Phase 3 complete):** 85 unit tests pass · ruff 0 violations · every file ≤ 150 LOC · `DebateSDK().run_debate()` produces a full `DebateResult` end-to-end with mocked LLMs. Coverage gate stays deferred to Phase 6 per `docs/PROMPTS.md` until the Phase 4 services (gatekeeper, watchdog, logger) and Phase 5 (RAG) come online.
+**Current test snapshot (2026-05-22, Phase 3 + 4.3 complete):** 93 unit tests pass · ruff 0 violations · every file ≤ 150 LOC · `DebateSDK().run_debate()` produces a full `DebateResult` end-to-end with mocked LLMs · FIFO-rotating logger + JSONL cost log online. Coverage gate stays deferred to Phase 6 per `docs/PROMPTS.md` until the remaining Phase 4 services (gatekeeper, watchdog, web search) and Phase 5 (RAG) come online.
 
 **Deferred from Phase 3.9 (tracked in `docs/TODO.md`):** the Orchestrator runs synchronously; `multiprocessing.Process` wrapping and SIGINT/SIGTERM handling land alongside the Watchdog in Phase 4.
 
