@@ -136,6 +136,13 @@ class DebateAgent(BaseAgent):
         prompt = self._build_user_prompt(envelope.previous_ping, evidence, envelope.round)
         response = self.generate(prompt)
         ping = self._parse_ping_json(response.text, side=self.side, round_=envelope.round)
+        # Defensive: smaller models sometimes omit `refers_to_ping` even when
+        # the prompt asks for it. The structural metadata is unambiguous from
+        # the envelope context — fill it in. The Judge's `clash` dimension
+        # separately scores whether the ping *rhetorically* engaged the
+        # opponent, so this auto-fill cannot mask a real "ignored opponent."
+        if ping.refers_to_ping is None and envelope.previous_ping is not None:
+            ping = ping.model_copy(update={"refers_to_ping": envelope.previous_ping.round})
         self._validate_clash(ping, envelope.previous_ping)
         ping.tokens_in = response.input_tokens
         ping.tokens_out = response.output_tokens

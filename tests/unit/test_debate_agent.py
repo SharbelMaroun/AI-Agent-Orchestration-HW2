@@ -143,8 +143,22 @@ def test_handle_your_turn_round2_validates_clash():
     assert ping.refers_to_ping == 1
 
 
-def test_handle_your_turn_round2_missing_clash_raises():
+def test_handle_your_turn_round2_missing_refers_to_ping_auto_fills():
+    """Smaller models sometimes omit `refers_to_ping`. We fill it in from
+    the envelope context — the Judge's `clash` dimension separately scores
+    whether the ping *rhetorically* engaged the opponent."""
     agent = _agent(llm_text='{"text": "no clash here", "citations": []}')
+    opp = _opponent_ping(round_=1)
+    ping = agent.handle_your_turn(YourTurn(round=2, previous_ping=opp))
+    assert ping.refers_to_ping == 1
+
+
+def test_handle_your_turn_wrong_refers_to_ping_still_raises():
+    """If the model returns the *wrong* round number, that's a real clash
+    violation — not just a missing field — and must still raise."""
+    agent = _agent(
+        llm_text='{"text": "bad", "citations": [], "refers_to_ping": 99}'
+    )
     opp = _opponent_ping(round_=1)
     with pytest.raises(ClashViolationError):
         agent.handle_your_turn(YourTurn(round=2, previous_ping=opp))
