@@ -37,8 +37,12 @@ class FakeHttpError(Exception):
 
 def _service(**over) -> ServiceLimit:
     base = {
-        "requests_per_minute": 60, "requests_per_hour": 600, "concurrent_max": 5,
-        "retry_after_seconds": 1, "max_retries": 3, "queue_max_depth": 10,
+        "requests_per_minute": 60,
+        "requests_per_hour": 600,
+        "concurrent_max": 5,
+        "retry_after_seconds": 1,
+        "max_retries": 3,
+        "queue_max_depth": 10,
         "retryable_status_codes": [429, 500, 503],
     }
     base.update(over)
@@ -55,15 +59,25 @@ def _rate_cfg(svc: ServiceLimit | None = None, warn: int = 80, hard: int = 100) 
 
 def _setup_cfg(budget: float = 5.0) -> SetupConfig:
     return SetupConfig(
-        version="1.00", topic="t", num_rounds=1, max_words_per_ping=10, budget_usd=budget,
+        version="1.00",
+        topic="t",
+        num_rounds=1,
+        max_words_per_ping=10,
+        budget_usd=budget,
         models={"dogs": ModelRef(provider="anthropic", name="haiku")},
-        timeouts=Timeouts(agent_response_seconds=10, watchdog_heartbeat_seconds=1,
-                          watchdog_kill_after_seconds=5, max_restarts_per_agent=1),
+        timeouts=Timeouts(
+            agent_response_seconds=10,
+            watchdog_heartbeat_seconds=1,
+            watchdog_kill_after_seconds=5,
+            max_restarts_per_agent=1,
+        ),
         rag=RagCfg(enabled=False, k=1, chunk_size=10, embedder="x", persist_dir="x"),
         search=SearchCfg(provider="ddg", max_results=1, timeout_seconds=1),
-        pricing={"anthropic": {
-            "haiku": ModelPrice(input_per_million_usd=1.0, output_per_million_usd=4.0),
-        }},
+        pricing={
+            "anthropic": {
+                "haiku": ModelPrice(input_per_million_usd=1.0, output_per_million_usd=4.0),
+            }
+        },
     )
 
 
@@ -79,9 +93,13 @@ def _gk(svc=None, budget=5.0, warn=80) -> ApiGatekeeper:
 
 def _resp(in_tok=100, out_tok=50, cache_creation=0, cache_read=0) -> CompletionResponse:
     return CompletionResponse(
-        text="hi", input_tokens=in_tok, output_tokens=out_tok,
-        cache_creation_tokens=cache_creation, cache_read_tokens=cache_read,
-        model="haiku", provider="anthropic",
+        text="hi",
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        cache_creation_tokens=cache_creation,
+        cache_read_tokens=cache_read,
+        model="haiku",
+        provider="anthropic",
     )
 
 
@@ -212,8 +230,10 @@ def test_queue_full_raises() -> None:
 def test_concurrent_max_respected() -> None:
     svc = _service(concurrent_max=2, requests_per_minute=100)
     gk = ApiGatekeeper(
-        rate_config=_rate_cfg(svc), setup=_setup_cfg(budget=1000),
-        logger=logging.getLogger("test"), sleep_fn=lambda _s: None,
+        rate_config=_rate_cfg(svc),
+        setup=_setup_cfg(budget=1000),
+        logger=logging.getLogger("test"),
+        sleep_fn=lambda _s: None,
     )
     in_flight = {"max": 0, "now": 0}
     lock = threading.Lock()
@@ -244,8 +264,10 @@ def test_unknown_service_falls_back_to_default() -> None:
 def test_cost_logger_called_when_provided(tmp_path) -> None:
     cost_log = MagicMock()
     gk = ApiGatekeeper(
-        rate_config=_rate_cfg(), setup=_setup_cfg(),
-        logger=logging.getLogger("test"), cost_logger=cost_log,
+        rate_config=_rate_cfg(),
+        setup=_setup_cfg(),
+        logger=logging.getLogger("test"),
+        cost_logger=cost_log,
         sleep_fn=lambda _s: None,
     )
     gk.execute(lambda: _resp())

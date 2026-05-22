@@ -32,8 +32,9 @@ class HashEmbedder:
 
 @pytest.fixture
 def store(tmp_path):
-    return RAGStore(collection_name="test_col", persist_dir=tmp_path / "chroma",
-                    embedder=HashEmbedder())
+    return RAGStore(
+        collection_name="test_col", persist_dir=tmp_path / "chroma", embedder=HashEmbedder()
+    )
 
 
 def test_add_then_retrieve(store: RAGStore) -> None:

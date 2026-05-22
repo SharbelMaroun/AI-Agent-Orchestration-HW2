@@ -29,9 +29,7 @@ class GoogleProvider(LLMProvider):
     def __init__(self) -> None:
         api_key = os.environ.get(ENV_VAR)
         if not api_key:
-            raise RuntimeError(
-                f"{ENV_VAR} not set — required for provider {PROVIDER_NAME!r}"
-            )
+            raise RuntimeError(f"{ENV_VAR} not set — required for provider {PROVIDER_NAME!r}")
         import google.generativeai as genai  # local import keeps test mocks simple
 
         genai.configure(api_key=api_key)

@@ -22,7 +22,9 @@ class SearchResult(BaseModel):
 
 
 class GatekeeperLike(Protocol):
-    def execute(self, api_call: Any, *args: Any, service: str = "default", **kwargs: Any) -> Any: ...
+    def execute(
+        self, api_call: Any, *args: Any, service: str = "default", **kwargs: Any
+    ) -> Any: ...
 
 
 class DDGBackend:
@@ -62,9 +64,7 @@ class WebSearch:
         if not query.strip():
             return []
         try:
-            raw = self.gatekeeper.execute(
-                self.backend.query, query, max_results, service="search"
-            )
+            raw = self.gatekeeper.execute(self.backend.query, query, max_results, service="search")
         except Exception as exc:
             self.logger.warning("web search failed query=%r err=%s", query, exc)
             return []

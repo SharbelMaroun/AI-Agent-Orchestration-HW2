@@ -26,9 +26,13 @@ def test_compute_cost_input_output() -> None:
 
 def test_compute_cost_cache_tokens_use_multipliers() -> None:
     cost = compute_cost(
-        "anthropic", "claude-haiku", _pricing(),
-        input_tokens=0, output_tokens=0,
-        cache_creation=1_000_000, cache_read=1_000_000,
+        "anthropic",
+        "claude-haiku",
+        _pricing(),
+        input_tokens=0,
+        output_tokens=0,
+        cache_creation=1_000_000,
+        cache_read=1_000_000,
     )
     expected = 1.0 * CACHE_WRITE_MULTIPLIER + 1.0 * CACHE_READ_MULTIPLIER
     assert abs(cost - expected) < 1e-9

@@ -74,9 +74,7 @@ class Watchdog:
         self._thread: threading.Thread | None = None
         self._fatal_agents: list[str] = []
 
-    def register(
-        self, agent_id: str, process: Any, restart_fn: Callable[[], Any]
-    ) -> None:
+    def register(self, agent_id: str, process: Any, restart_fn: Callable[[], Any]) -> None:
         with self._lock:
             self._entries[agent_id] = _Entry(
                 process=process, restart_fn=restart_fn, last_seen=self._clock()
@@ -114,7 +112,8 @@ class Watchdog:
         now = self._clock()
         with self._lock:
             stale = [
-                (aid, e) for aid, e in self._entries.items()
+                (aid, e)
+                for aid, e in self._entries.items()
                 if not e.fatal and now - e.last_seen > self.config.kill_after_seconds
             ]
         for agent_id, entry in stale:
@@ -129,9 +128,7 @@ class Watchdog:
             self._sleep(self.config.poll_interval_seconds)
 
     def _handle_timeout(self, agent_id: str, entry: _Entry) -> None:
-        self.logger.warning(
-            "AGENT_TIMEOUT agent=%s last_seen=%.3f", agent_id, entry.last_seen
-        )
+        self.logger.warning("AGENT_TIMEOUT agent=%s last_seen=%.3f", agent_id, entry.last_seen)
         self._terminate(agent_id, entry.process)
         with self._lock:
             entry.restart_count += 1

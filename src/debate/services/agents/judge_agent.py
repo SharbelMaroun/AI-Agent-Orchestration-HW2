@@ -16,8 +16,13 @@ from debate.shared.skill_loader import load_skill
 DEFAULT_SKILL_PATH = Path("skills/judge")
 _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 _CONCESSION_PHRASES = (
-    "good point", "fair enough", "i agree", "you're right",
-    "i concede", "valid point", "you make a good",
+    "good point",
+    "fair enough",
+    "i agree",
+    "you're right",
+    "i concede",
+    "valid point",
+    "you make a good",
 )
 
 

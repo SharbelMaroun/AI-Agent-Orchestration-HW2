@@ -258,6 +258,20 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-22 — Phase 8.1 + 8.2: integration check + repo hygiene sweep
+
+**Context:** Last pre-submission pass. Want every check the rubric implies to be green, and any drift between docs and code closed.
+**Goal:** Run the full automated checklist — lint, format, suite, key/secret grep, comment sweep, decision-pending sweep, menu smoke test — and fix anything broken before the partner-runnable items (real-debate run, screenshots, Moodle upload) take over.
+**What the sweep found:**
+  1. **`ruff format --check` was failing on 29 files.** Whitespace only (ruff format ≠ ruff check), but the `just ci` recipe would have failed on a fresh clone. Applied `ruff format .`, suite still 187 passing.
+  2. **`python -m debate` was broken** despite the README documenting that exact command in three places. The `[project.scripts] debate = "debate.main:cli"` entry-point script worked, but `python -m <package>` requires a `__main__.py` and we never wrote one. Added `src/debate/__main__.py` — three lines that delegate to `cli()`.
+  3. **No secrets in the repo.** `git log --all -- .env` empty; grep for `sk-ant-…|sk-…|AIza…` patterns across tracked files empty.
+  4. **No TODO/FIXME/XXX/HACK comments** anywhere in `src/`. The deferred items live in `docs/TODO.md` with rationale rather than as code comments — the right place for them.
+  5. **No "decision pending" or "TBD"** in PRD or PLAN. The Phase-0 Open Questions in PLAN §9 were all resolved in the docs-backfill commit.
+**Lesson:** `ruff check` and `ruff format --check` are different gates — the project CI bundle needs both, and they need to be run together regularly, not just `check` alone. Also, every documented invocation should have a smoke test of its own; the `python -m debate` bug would have shipped to a grader otherwise.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)

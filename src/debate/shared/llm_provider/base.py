@@ -46,9 +46,7 @@ def register(name: str, cls: type[LLMProvider]) -> None:
 def build_provider(name: str) -> LLMProvider:
     """Look up `name` in the registry and instantiate the provider."""
     if name not in _REGISTRY:
-        raise ValueError(
-            f"Unknown LLM provider {name!r}. Registered: {sorted(_REGISTRY)}"
-        )
+        raise ValueError(f"Unknown LLM provider {name!r}. Registered: {sorted(_REGISTRY)}")
     return _REGISTRY[name]()
 
 

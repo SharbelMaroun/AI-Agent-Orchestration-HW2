@@ -70,9 +70,7 @@ class DebateAgent(BaseAgent):
         """Gather web-search hits + RAG passages. Either tool may be absent."""
         evidence: dict[str, list] = {"search": [], "rag": []}
         if self.search_tool is not None:
-            evidence["search"] = self.search_tool.search(
-                query, max_results=self.search_max_results
-            )
+            evidence["search"] = self.search_tool.search(query, max_results=self.search_max_results)
         if self.rag is not None:
             evidence["rag"] = self.rag.retrieve(query, k=self.rag_k)
         return evidence
@@ -115,9 +113,13 @@ class DebateAgent(BaseAgent):
         evidence: dict[str, list],
         round_: int,
     ) -> str:
-        prior = "" if previous_ping is None else (
-            f"\nOpponent's previous ping (round {previous_ping.round}, "
-            f"side {previous_ping.side}):\n{previous_ping.text}\n"
+        prior = (
+            ""
+            if previous_ping is None
+            else (
+                f"\nOpponent's previous ping (round {previous_ping.round}, "
+                f"side {previous_ping.side}):\n{previous_ping.text}\n"
+            )
         )
         return (
             f"Round {round_}. You are arguing for the side: {self.side}.\n"

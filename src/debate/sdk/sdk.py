@@ -27,7 +27,9 @@ class _PassthroughGatekeeper:
     """Stub until Phase 4.1 lands the real ApiGatekeeper. Honors the
     Protocol `BaseAgent` expects so it drops in without agent changes."""
 
-    def execute(self, api_call: Callable, *args: Any, service: str = "default", **kwargs: Any) -> Any:
+    def execute(
+        self, api_call: Callable, *args: Any, service: str = "default", **kwargs: Any
+    ) -> Any:
         del service  # accepted for protocol compatibility
         return api_call(*args, **kwargs)
 

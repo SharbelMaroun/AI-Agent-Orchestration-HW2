@@ -732,25 +732,26 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 ## Phase 8 — Submission
 
 ### 8.1 Final integration check
-- [ ] Fresh clone of repo into a temp directory
-- [ ] `uv sync` works on fresh clone
-- [ ] `.env.example` → `.env` with real key
-- [ ] `uv run pytest --cov` passes ≥ 85%
-- [ ] `uv run ruff check .` passes 0 errors
-- [ ] `uv run python -m debate` launches the menu
-- [ ] A full debate runs end-to-end without errors
-- [ ] `results/debates/<timestamp>.json` is produced
-- [ ] Verdict declares a non-tie winner
-- [ ] Cost report shows < $5 spent
+- [ ] Fresh clone of repo into a temp directory — partner-runnable verification
+- [x] `uv sync` works (verified during dependency adds)
+- [ ] `.env.example` → `.env` with real key — partner step
+- [x] `uv run pytest --cov` passes ≥ 85% (96.08% on Phase 8 sweep, 187 tests)
+- [x] `uv run ruff check .` passes 0 errors
+- [x] `uv run ruff format --check .` clean (after `ruff format .` applied in Phase 8 sweep)
+- [x] `uv run python -m debate` launches the menu (added missing `src/debate/__main__.py`)
+- [ ] A full debate runs end-to-end without errors — needs real GOOGLE_API_KEY
+- [ ] `results/debates/<timestamp>.json` is produced — same
+- [ ] Verdict declares a non-tie winner — same
+- [ ] Cost report shows < $5 spent — same
 
-### 8.2 Repo hygiene
-- [ ] No `.env` in git history (`git log --all -- .env`)
-- [ ] No API keys in any committed file (grep sweep)
-- [ ] `.gitignore` covers all sensitive paths
-- [ ] All TODO items in PRD/PLAN resolved or moved to "out of scope"
-- [ ] All `# TODO:` / `# FIXME:` comments in code resolved or filed as issues
-- [ ] All ADRs in PLAN.md final (no "decision pending")
-- [ ] `docs/PROMPTS.md` updated with final entries
+### 8.2 Repo hygiene ✅
+- [x] No `.env` in git history (`git log --all -- .env` returns empty)
+- [x] No API key patterns in any tracked file (regex sweep for `sk-ant-…`, `sk-…`, `AIza…`)
+- [x] `.gitignore` covers `.env`, `*.key`, `*.pem`, `credentials.json`, `.venv/`, vector store binaries, runtime logs
+- [x] PRD/PLAN open questions resolved (PLAN §9 rewritten in docs backfill commit)
+- [x] No `# TODO:` / `# FIXME:` / `# XXX:` / `# HACK:` comments in `src/`
+- [x] PLAN.md ADRs final; no "decision pending" or "TBD" in PRD or PLAN
+- [x] `docs/PROMPTS.md` updated with all phase entries through 7.7
 
 ### 8.3 Submission package
 - [ ] Generate PDF of README (or specific submission doc) for Moodle

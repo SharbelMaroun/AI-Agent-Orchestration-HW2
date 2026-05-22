@@ -40,7 +40,8 @@ def test_constants_module_is_importable() -> None:
 
 def _logging_cfg(tmp_path: Path, console: bool = False) -> LoggingConfig:
     return LoggingConfig(
-        version="1.00", level="INFO",
+        version="1.00",
+        level="INFO",
         format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S",
         directory=str(tmp_path / "logs"),
@@ -53,8 +54,11 @@ def _logging_cfg(tmp_path: Path, console: bool = False) -> LoggingConfig:
 def test_logger_with_console_enabled_adds_stream_handler(tmp_path: Path) -> None:
     cfg = _logging_cfg(tmp_path, console=True)
     root = configure_root_logger(cfg)
-    stream_handlers = [h for h in root.handlers if isinstance(h, logging.StreamHandler)
-                       and not isinstance(h, FifoRotatingHandler)]
+    stream_handlers = [
+        h
+        for h in root.handlers
+        if isinstance(h, logging.StreamHandler) and not isinstance(h, FifoRotatingHandler)
+    ]
     assert len(stream_handlers) == 1
     for h in list(root.handlers):
         root.removeHandler(h)
@@ -64,7 +68,10 @@ def test_logger_with_console_enabled_adds_stream_handler(tmp_path: Path) -> None
 def test_get_cost_logger_creates_parent_dirs(tmp_path: Path) -> None:
     nested = tmp_path / "deeply" / "nested" / "cost.jsonl"
     cfg = LoggingConfig(
-        version="1.00", level="INFO", format="%(message)s", datefmt="%H:%M:%S",
+        version="1.00",
+        level="INFO",
+        format="%(message)s",
+        datefmt="%H:%M:%S",
         directory=str(tmp_path / "logs"),
         rotation=Rotation(max_files=2, max_lines_per_file=2),
         cost_log=CostLog(path=str(nested), format="jsonl"),
@@ -83,18 +90,23 @@ def test_get_cost_logger_creates_parent_dirs(tmp_path: Path) -> None:
 class _Proc:
     def __init__(self) -> None:
         self._alive = True
+
     def terminate(self) -> None:
         self._alive = False
+
     def kill(self) -> None:
         self._alive = False
+
     def is_alive(self) -> bool:
         return self._alive
 
 
 def test_watchdog_start_stop_real_thread() -> None:
     cfg = WatchdogConfig(
-        heartbeat_seconds=0.05, kill_after_seconds=10.0,
-        max_restarts_per_agent=1, terminate_grace_seconds=0.0,
+        heartbeat_seconds=0.05,
+        kill_after_seconds=10.0,
+        max_restarts_per_agent=1,
+        terminate_grace_seconds=0.0,
         poll_interval_seconds=0.01,
     )
     wd = Watchdog(cfg, logger=logging.getLogger("test"))
@@ -110,8 +122,10 @@ def test_watchdog_start_stop_real_thread() -> None:
 def test_watchdog_loop_logs_and_continues_on_exception() -> None:
     # Force check_once to raise — the _loop must swallow it and keep going.
     cfg = WatchdogConfig(
-        heartbeat_seconds=0.05, kill_after_seconds=10.0,
-        max_restarts_per_agent=1, terminate_grace_seconds=0.0,
+        heartbeat_seconds=0.05,
+        kill_after_seconds=10.0,
+        max_restarts_per_agent=1,
+        terminate_grace_seconds=0.0,
         poll_interval_seconds=0.01,
     )
     wd = Watchdog(cfg, logger=logging.getLogger("test"))
@@ -141,8 +155,10 @@ def test_ingest_main_smoke(tmp_path: Path, monkeypatch) -> None:
     class StubEmbedder:
         def __init__(self, *_a, **_kw) -> None:
             pass
+
         def embed_text(self, t: str) -> list[float]:
             return [0.1] * 8
+
         def embed_batch(self, ts: list[str]) -> list[list[float]]:
             return [[0.1] * 8 for _ in ts]
 
@@ -157,14 +173,22 @@ def test_ingest_main_smoke(tmp_path: Path, monkeypatch) -> None:
     cfg_path = tmp_path / "setup.json"
     repo_setup = Path("config/setup.json").read_text(encoding="utf-8")
     cfg_path.write_text(
-        repo_setup.replace('"data/{agent}/chroma"', f'"{(tmp_path / "chroma_{agent}").as_posix()}"'.replace("{agent}", "{agent}")),
+        repo_setup.replace(
+            '"data/{agent}/chroma"',
+            f'"{(tmp_path / "chroma_{agent}").as_posix()}"'.replace("{agent}", "{agent}"),
+        ),
         encoding="utf-8",
     )
-    rc = ingest_main([
-        "--agent", "dogs",
-        "--config", str(cfg_path),
-        "--data-root", str(data_root),
-    ])
+    rc = ingest_main(
+        [
+            "--agent",
+            "dogs",
+            "--config",
+            str(cfg_path),
+            "--data-root",
+            str(data_root),
+        ]
+    )
     assert rc == 0
 
 
