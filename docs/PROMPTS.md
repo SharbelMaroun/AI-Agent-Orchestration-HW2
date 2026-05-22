@@ -131,6 +131,21 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-22 — Phase 3.6–3.10: agents, orchestrator, SDK
+
+**Context:** Closing out the "core code" phase in one push: concrete `DogsAgent` / `CatsAgent` (thin subclasses over `DebateAgent`), `JudgeAgent` with scoring + tie-break, `Orchestrator` that drives the loop, and `DebateSDK` as the single entry point.
+**Goal:** Have `DebateSDK().run_debate()` produce a real `DebateResult` end-to-end (with mocked LLMs) — meeting acceptance criteria G1, G2, G4, G5 from PRD §2.1.
+**Decisions:**
+  1. **System prompts live as `.md` files in `prompts/`, not inlined in Python.** Each agent's `__init__` reads its file by default; tests inject an inline override. Reasoning: the system prompt IS the agent — it's the artifact graders will scrutinize most. Keeping it in a markdown file means iteration is a single-file edit with no Python escaping, and the prompt is grep-able from a doc viewer.
+  2. **Synchronous Orchestrator first; multiprocessing wrapping deferred.** The Orchestrator calls `agent.receive(envelope)` directly rather than putting envelopes on `multiprocessing.Queue`s. The agent contract (`receive` returns the next envelope or None) is identical to what a process-driven version would need, so the upgrade is a wrapper, not a rewrite. Honest cost: PRD §3.2's "exactly one agent active at any moment" is trivially true in a single-process loop but not yet *proven* by process isolation. TODO 3.9 reflects the deferred items explicitly.
+  3. **Judge tie-break overrides the LLM verdict.** The LLM produces `winner` and `written_rationale`. If totals are exactly tied, `JudgeAgent._tie_break()` picks the side with the higher cumulative clash (then pathos), independent of what the LLM said. PRD §1.2 says ties are forbidden — making the override deterministic in code means a flaky LLM cannot produce a tie.
+  4. **`_PassthroughGatekeeper` is the SDK default.** Honors the `GatekeeperLike` Protocol so when Phase 4.1's real `ApiGatekeeper` lands, the SDK constructor's `gatekeeper=` argument is the only line that changes. The chokepoint test (`test_sdk_passthrough_gatekeeper_default`) asserts the SDK never holds a None gatekeeper, even before the real one exists.
+  5. **Concession heuristic forces clash=0 in code, not just in the prompt.** The judge prompt says "concessions get clash 0," but `score_ping` also detects concession phrases and overrides the model's clash score. Defense-in-depth: the LLM might generously give a 2; the code guarantees the 0.
+**Result:** 50 new tests across 5 files (85 total). Ruff 0 violations. Every new file under the 150-LOC cap. Coverage on `src/debate/` rises significantly now that the service skeletons are real.
+**Lesson:** When a non-negotiable rule (no ties; chokepoint; concession penalty) lives in a prompt, the LLM will mostly comply but will occasionally violate it. Mirror the rule in deterministic code at the boundary. The prompt asks; the code enforces.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
