@@ -313,6 +313,21 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-23 — Live event stream: pings + scores rendered as the debate runs
+
+**Context:** Sharbel's first full-debate run only showed the final verdict — the 10 rounds of pings and the 20 judge scores all happened invisibly, then a wall of text dumped at the end. He wanted to *see* the debate progress: every agent response and every judge ruling, in order.
+**Goal:** Stream debate events to the CLI in real time without breaking the orchestrator's interface for non-CLI consumers (integration tests, future GUI, etc.).
+**Key design decisions:**
+  1. **Callback at the Orchestrator boundary, not inside agents.** `Orchestrator.__init__` now accepts `on_event: Callable[[str, Any], None] | None = None`. Each agent stays oblivious to "is anyone watching me." The orchestrator is the only thing that already sees the cross-agent flow (ping → judge → next ping), so it's the right place to fan out events.
+  2. **String kind + payload pattern, not three separate callbacks.** `on_event("ping", ping)`, `on_event("score", score)`, `on_event("verdict", verdict)`. Cheap to extend (add `"round_started"` later without changing the signature), trivially testable (collect events in a list, assert sequence).
+  3. **`_run_round` now captures the score** the judge returns from `judge.receive(ping)` — previously the return was discarded since no one needed it mid-debate. Now we emit it so the CLI can show the per-ping rubric breakdown immediately, while the judge's internal `self.scores` list is still the source of truth for the final verdict math.
+  4. **Default `on_event=None` is a no-op.** Every existing caller (integration tests, smoke tests, the SDK before this change) keeps working unchanged. The new behavior is opt-in. `test_orchestrator_on_event_none_is_noop` pins this.
+  5. **CLI prints per-event via `_live_event_printer(writer)`** that returns a closure over the writer. Reuses `_fmt_ping`; adds `_fmt_score` showing each dimension (`struct/logos/pathos/ethos/clash`) + total + the judge's one-sentence rationale. The verdict event triggers a `===== VERDICT =====` banner so the boundary is unmistakable in the terminal output.
+**Result:** Menu option 1 now prints — live — every ping with token counts and citations, followed immediately by the judge's score breakdown for that ping, round after round, then the verdict. Suite at 190 tests, ruff 0.
+**Lesson:** When the user says "I want to see the process, not just the result," the right move is to add a *streaming seam* at the orchestrator boundary, not to dump everything at the end. The default-None callback keeps it backward-compatible; the string-kind dispatch keeps it extensible.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)

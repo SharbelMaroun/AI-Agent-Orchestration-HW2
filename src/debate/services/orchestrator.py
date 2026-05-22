@@ -15,6 +15,7 @@ and when the watchdog phase needs it.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,9 +25,12 @@ from debate.shared.schemas import (
     DebateResult,
     OpeningBrief,
     Ping,
+    Score,
     Verdict,
     YourTurn,
 )
+
+OnEvent = Callable[[str, Any], None]  # (kind, payload) — kind in {"ping","score","verdict"}
 
 
 class Orchestrator:
@@ -38,12 +42,18 @@ class Orchestrator:
         num_rounds: int,
         rules: str = "≤250 words per ping, JSON-only replies, clash required from round 2.",
         results_dir: Path | str = "results/debates",
+        on_event: OnEvent | None = None,
     ) -> None:
         self.topic = topic
         self.num_rounds = num_rounds
         self.rules = rules
         self.results_dir = Path(results_dir)
+        self.on_event = on_event
         self.pings: list[Ping] = []
+
+    def _emit(self, kind: str, payload: Any) -> None:
+        if self.on_event is not None:
+            self.on_event(kind, payload)
 
     def run_debate(self, dogs: Any, cats: Any, judge: JudgeAgent) -> DebateResult:
         started_at = datetime.now(timezone.utc)
@@ -84,18 +94,25 @@ class Orchestrator:
         dogs_ping = dogs.receive(YourTurn(round=round_num, previous_ping=previous_ping))
         if not isinstance(dogs_ping, Ping):
             raise RuntimeError(f"Dogs agent did not return a Ping in round {round_num}")
-        judge.receive(dogs_ping)
+        self._emit("ping", dogs_ping)
+        dogs_score = judge.receive(dogs_ping)
+        if isinstance(dogs_score, Score):
+            self._emit("score", dogs_score)
 
         cats_ping = cats.receive(YourTurn(round=round_num, previous_ping=dogs_ping))
         if not isinstance(cats_ping, Ping):
             raise RuntimeError(f"Cats agent did not return a Ping in round {round_num}")
-        judge.receive(cats_ping)
+        self._emit("ping", cats_ping)
+        cats_score = judge.receive(cats_ping)
+        if isinstance(cats_score, Score):
+            self._emit("score", cats_score)
         return dogs_ping, cats_ping
 
     def _collect_verdict(self, judge: JudgeAgent) -> Verdict:
         verdict = judge.receive(FinalizeRequest(pings=self.pings))
         if not isinstance(verdict, Verdict):
             raise RuntimeError("Judge did not return a Verdict")
+        self._emit("verdict", verdict)
         return verdict
 
     def _persist_result(self, result: DebateResult) -> Path:

@@ -54,7 +54,11 @@ class DebateSDK:
         self.provider_factory = provider_factory
         self._last_result: DebateResult | None = None
 
-    def run_debate(self, topic: str | None = None) -> DebateResult:
+    def run_debate(
+        self,
+        topic: str | None = None,
+        on_event: Callable[[str, Any], None] | None = None,
+    ) -> DebateResult:
         cfg = self.setup
         dogs = DogsAgent(
             provider=self.provider_factory(cfg.models["dogs"].provider),
@@ -75,6 +79,7 @@ class DebateSDK:
             topic=topic or cfg.topic,
             num_rounds=cfg.num_rounds,
             results_dir=self.results_dir,
+            on_event=on_event,
         )
         self._last_result = orch.run_debate(dogs, cats, judge)
         return self._last_result
