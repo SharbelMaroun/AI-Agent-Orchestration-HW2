@@ -5,9 +5,9 @@
   "max_words_per_ping": 250,
   "budget_usd": 5.00,
   "models": {
-    "dogs":  { "provider": "google", "name": "gemini-2.5-flash" },
-    "cats":  { "provider": "google", "name": "gemini-2.5-flash" },
-    "judge": { "provider": "google", "name": "gemini-2.5-pro" }
+    "dogs":  { "provider": "google", "name": "gemini-2.5-flash-lite" },
+    "cats":  { "provider": "google", "name": "gemini-2.5-flash-lite" },
+    "judge": { "provider": "google", "name": "gemini-2.5-flash-lite" }
   },
   "timeouts": {
     "agent_response_seconds": 60,
