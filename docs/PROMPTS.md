@@ -282,6 +282,19 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-23 — Post-Phase-8 bug fix #2: auto-fill `refers_to_ping`
+
+**Context:** Second real-key run hit `ClashViolationError: ping for round 1 must refer to opponent ping 1, got refers_to_ping=None`. The Cats agent's first ping omitted the `refers_to_ping` field even though the prompt explicitly asks for it.
+**Root cause:** Switching to `gemini-2.5-flash-lite` (cheapest tier) for cost trades reasoning power. The model produces structurally valid JSON but sometimes drops optional-looking fields. Larger models (Sonnet, Opus, gemini-2.5-pro) had not surfaced this because they reliably include the field.
+**Fix:** `DebateAgent.handle_your_turn` now auto-fills `refers_to_ping` from `envelope.previous_ping.round` when the model returns `None`. The contract change is intentional:
+  - **Structural metadata** (which round are we replying to) is *unambiguous from the envelope* — the orchestrator knows it before the LLM does. Letting the model omit it doesn't hide information.
+  - **Rhetorical clash** (did the ping *actually* engage the opponent) is judged separately by `JudgeAgent.score_ping`'s `clash` dimension. That signal is unaffected.
+  - **A *wrong* `refers_to_ping`** (model returns `99` instead of `1`) still raises `ClashViolationError` — see new test `test_handle_your_turn_wrong_refers_to_ping_still_raises`.
+**Test contract update:** Renamed `test_handle_your_turn_round2_missing_clash_raises` → `test_handle_your_turn_round2_missing_refers_to_ping_auto_fills` (now asserts the auto-fill), and added the wrong-round counterpart. Net: 188 tests pass.
+**Lesson:** When choosing a cheaper tier, the surface that breaks first is *strict JSON adherence to optional-looking fields*. Defensive parsing at the IPC boundary is cheaper than prompt engineering for the smallest model — and the validation that matters (rhetorical clash) is owned by a different agent (the Judge), so the auto-fill doesn't hide misbehavior.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)

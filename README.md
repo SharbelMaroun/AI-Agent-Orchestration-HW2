@@ -180,7 +180,7 @@ Current state (Phase 7 close):
 
 | Metric | Threshold (CLAUDE.md) | Actual |
 |---|---|---|
-| Test count | — | **187** (165 prior + 15 CLI + 7 Gemini provider) |
+| Test count | — | **188** (165 prior + 15 CLI + 7 Gemini provider + 1 from defensive auto-fill split) |
 | Coverage | ≥ 85% | **96%+** |
 | Ruff violations | 0 | **0** |
 | File LOC | ≤ 150 (code lines) | All ≤ 150 |
