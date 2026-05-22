@@ -49,9 +49,7 @@ class RAGStore:
 
         return chromadb.PersistentClient(path=str(self.persist_dir))
 
-    def add(
-        self, documents: list[str], metadatas: list[dict], ids: list[str]
-    ) -> int:
+    def add(self, documents: list[str], metadatas: list[dict], ids: list[str]) -> int:
         """Insert chunks, skipping any IDs already present. Returns the number
         of *new* chunks inserted so the ingest CLI can log progress."""
         if not documents:
@@ -88,9 +86,7 @@ class RAGStore:
         metas = (result.get("metadatas") or [[]])[0]
         dists = (result.get("distances") or [[]])[0]
         for doc, meta, dist in zip(docs, metas, dists, strict=False):
-            passages.append(
-                Passage(text=doc, metadata=meta or {}, distance=float(dist))
-            )
+            passages.append(Passage(text=doc, metadata=meta or {}, distance=float(dist)))
         return passages
 
     def count(self) -> int:

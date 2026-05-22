@@ -45,9 +45,7 @@ def chunk_words(text: str, chunk_size: int) -> list[str]:
     words = text.split()
     if not words:
         return []
-    return [
-        " ".join(words[i : i + chunk_size]) for i in range(0, len(words), chunk_size)
-    ]
+    return [" ".join(words[i : i + chunk_size]) for i in range(0, len(words), chunk_size)]
 
 
 def _chunk_id(file_path: Path, index: int) -> str:
@@ -55,9 +53,7 @@ def _chunk_id(file_path: Path, index: int) -> str:
     return hashlib.sha1(raw, usedforsecurity=False).hexdigest()[:16]
 
 
-def ingest_directory(
-    corpus_dir: Path, store: RAGStore, chunk_size: int
-) -> tuple[int, int]:
+def ingest_directory(corpus_dir: Path, store: RAGStore, chunk_size: int) -> tuple[int, int]:
     """Walk `corpus_dir/*.txt`, chunk, and add to `store`. Returns
     (files_seen, chunks_added). Idempotent — re-running adds zero chunks."""
     files = sorted(corpus_dir.glob("*.txt"))

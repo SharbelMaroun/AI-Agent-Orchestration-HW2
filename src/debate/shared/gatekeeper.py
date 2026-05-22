@@ -29,8 +29,13 @@ from .rate_limiter import (
 )
 from .schemas import CompletionResponse
 
-__all__ = ["ApiCallFailedError", "ApiGatekeeper", "BudgetExceededError",
-           "QueueFullError", "QueueStatus"]
+__all__ = [
+    "ApiCallFailedError",
+    "ApiGatekeeper",
+    "BudgetExceededError",
+    "QueueFullError",
+    "QueueStatus",
+]
 
 
 class ApiGatekeeper:
@@ -117,22 +122,36 @@ class ApiGatekeeper:
         if not isinstance(result, CompletionResponse):
             return
         cost = compute_cost(
-            result.provider, result.model, self.setup.pricing,
-            result.input_tokens, result.output_tokens,
-            result.cache_creation_tokens, result.cache_read_tokens,
+            result.provider,
+            result.model,
+            self.setup.pricing,
+            result.input_tokens,
+            result.output_tokens,
+            result.cache_creation_tokens,
+            result.cache_read_tokens,
         )
         self.tracker.record(
-            result.provider, result.model,
-            result.input_tokens, result.output_tokens,
-            result.cache_creation_tokens, result.cache_read_tokens, cost,
+            result.provider,
+            result.model,
+            result.input_tokens,
+            result.output_tokens,
+            result.cache_creation_tokens,
+            result.cache_read_tokens,
+            cost,
         )
         if self.cost_logger is not None:
-            log_cost_entry(self.cost_logger, {
-                "provider": result.provider, "model": result.model,
-                "input_tokens": result.input_tokens, "output_tokens": result.output_tokens,
-                "cache_creation": result.cache_creation_tokens,
-                "cache_read": result.cache_read_tokens, "cost_usd": cost,
-            })
+            log_cost_entry(
+                self.cost_logger,
+                {
+                    "provider": result.provider,
+                    "model": result.model,
+                    "input_tokens": result.input_tokens,
+                    "output_tokens": result.output_tokens,
+                    "cache_creation": result.cache_creation_tokens,
+                    "cache_read": result.cache_read_tokens,
+                    "cost_usd": cost,
+                },
+            )
         self._check_budget()
 
     def _check_budget(self) -> None:
@@ -144,12 +163,8 @@ class ApiGatekeeper:
         hard = self.rate_config.budget.hard_limit_pct / 100
         with self._budget_lock:
             if ratio >= hard:
-                self.logger.error(
-                    "budget exceeded: $%.4f of $%.2f", self.tracker.total_usd, budget
-                )
-                raise BudgetExceededError(
-                    f"spent ${self.tracker.total_usd:.4f} of ${budget:.2f}"
-                )
+                self.logger.error("budget exceeded: $%.4f of $%.2f", self.tracker.total_usd, budget)
+                raise BudgetExceededError(f"spent ${self.tracker.total_usd:.4f} of ${budget:.2f}")
             if ratio >= warn and not self._warned:
                 self._warned = True
                 self.logger.warning("budget at %.1f%% of $%.2f", ratio * 100, budget)
@@ -157,8 +172,7 @@ class ApiGatekeeper:
     def get_queue_status(self, service: str = "default") -> QueueStatus:
         st = self._state(service)
         with st.lock:
-            return QueueStatus(service, st.pending, st.in_flight,
-                               len(st.minute), len(st.hour))
+            return QueueStatus(service, st.pending, st.in_flight, len(st.minute), len(st.hour))
 
     def get_token_summary(self) -> dict:
         return self.tracker.summary()

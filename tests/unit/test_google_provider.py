@@ -102,7 +102,8 @@ def test_google_system_instruction_passed(monkeypatch) -> None:
     fake = _install_fake_genai(monkeypatch, _fake_response())
     p = GoogleProvider()
     p.complete(
-        system="you are wise", messages=[ChatMessage(role="user", content="?")],
+        system="you are wise",
+        messages=[ChatMessage(role="user", content="?")],
         model="gemini-2.5-flash",
     )
     call_kwargs = fake.GenerativeModel.call_args.kwargs
@@ -123,7 +124,8 @@ def test_google_handles_missing_usage_metadata(monkeypatch) -> None:
     bare = SimpleNamespace(text="ok", usage_metadata=None)
     _install_fake_genai(monkeypatch, bare)
     p = GoogleProvider()
-    resp = p.complete(system="s", messages=[ChatMessage(role="user", content="x")],
-                      model="gemini-2.5-flash")
+    resp = p.complete(
+        system="s", messages=[ChatMessage(role="user", content="x")], model="gemini-2.5-flash"
+    )
     assert resp.input_tokens == 0
     assert resp.output_tokens == 0

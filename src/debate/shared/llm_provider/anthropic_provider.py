@@ -26,9 +26,7 @@ class AnthropicProvider(LLMProvider):
     def __init__(self) -> None:
         api_key = os.environ.get(ENV_VAR)
         if not api_key:
-            raise RuntimeError(
-                f"{ENV_VAR} not set — required for provider {PROVIDER_NAME!r}"
-            )
+            raise RuntimeError(f"{ENV_VAR} not set — required for provider {PROVIDER_NAME!r}")
         from anthropic import Anthropic  # local import keeps test mocks simple
 
         self._client = Anthropic(api_key=api_key)

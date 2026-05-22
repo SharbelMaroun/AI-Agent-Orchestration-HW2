@@ -35,14 +35,21 @@ def _agent(rag=None, search=None, llm_text='{"text": "woof", "citations": []}'):
     provider = MagicMock()
     provider.complete = MagicMock(
         return_value=CompletionResponse(
-            text=llm_text, input_tokens=11, output_tokens=22,
-            model="m", provider="anthropic",
+            text=llm_text,
+            input_tokens=11,
+            output_tokens=22,
+            model="m",
+            provider="anthropic",
         )
     )
     return _Dogs(
-        agent_id="dogs", system_prompt="be persuasive",
-        provider=provider, gatekeeper=_passthrough_gk(), model_name="m",
-        rag=rag, search_tool=search,
+        agent_id="dogs",
+        system_prompt="be persuasive",
+        provider=provider,
+        gatekeeper=_passthrough_gk(),
+        model_name="m",
+        rag=rag,
+        search_tool=search,
     )
 
 
@@ -115,7 +122,8 @@ def test_handle_your_turn_round1_full_flow():
     search = MagicMock()
     search.search.return_value = []
     agent = _agent(
-        rag=rag, search=search,
+        rag=rag,
+        search=search,
         llm_text='{"text": "dogs win", "citations": []}',
     )
     ping = agent.handle_your_turn(YourTurn(round=1, previous_ping=None))

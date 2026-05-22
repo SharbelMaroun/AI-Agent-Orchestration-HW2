@@ -34,8 +34,11 @@ def _passthrough_gatekeeper():
 
 def _fake_response(text="reply", tin=10, tout=20):
     return CompletionResponse(
-        text=text, input_tokens=tin, output_tokens=tout,
-        model="m", provider="anthropic",
+        text=text,
+        input_tokens=tin,
+        output_tokens=tout,
+        model="m",
+        provider="anthropic",
     )
 
 
@@ -133,8 +136,10 @@ def test_run_loop_reraises_on_handler_failure():
             raise RuntimeError("kaboom")
 
     agent = Boom(
-        agent_id="x", system_prompt="s",
-        provider=MagicMock(), gatekeeper=_passthrough_gatekeeper(),
+        agent_id="x",
+        system_prompt="s",
+        provider=MagicMock(),
+        gatekeeper=_passthrough_gatekeeper(),
         model_name="m",
     )
     inbox: queue.Queue = queue.Queue()

@@ -120,8 +120,8 @@ def test_heartbeat_after_register_resets_last_seen() -> None:
     wd.register("dogs", FakeProcess(), lambda: FakeProcess())
     clock.advance(4.9)
     wd.heartbeat("dogs")  # now last_seen = 4.9
-    clock.advance(4.9)    # total 9.8, but only 4.9 since heartbeat
-    wd.check_once()       # 4.9 ≤ 5.0 → no timeout
+    clock.advance(4.9)  # total 9.8, but only 4.9 since heartbeat
+    wd.check_once()  # 4.9 ≤ 5.0 → no timeout
     # If the heartbeat had been ignored, this would have fired a restart.
 
 
@@ -158,6 +158,7 @@ def test_config_from_timeouts() -> None:
         watchdog_heartbeat_seconds = 5
         watchdog_kill_after_seconds = 90
         max_restarts_per_agent = 3
+
     cfg = WatchdogConfig.from_timeouts(T())
     assert cfg.heartbeat_seconds == 5
     assert cfg.kill_after_seconds == 90

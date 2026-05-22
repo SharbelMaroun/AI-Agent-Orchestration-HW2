@@ -21,9 +21,15 @@ def _passthrough_gk():
 
 def _provider_with_text(text: str):
     p = MagicMock()
-    p.complete = MagicMock(return_value=CompletionResponse(
-        text=text, input_tokens=1, output_tokens=1, model="m", provider="anthropic",
-    ))
+    p.complete = MagicMock(
+        return_value=CompletionResponse(
+            text=text,
+            input_tokens=1,
+            output_tokens=1,
+            model="m",
+            provider="anthropic",
+        )
+    )
     return p
 
 
@@ -60,15 +66,35 @@ def test_concession_forces_clash_zero():
 
 
 def test_total_helper():
-    s = Score(ping_round=1, side="dogs", structure=1, logos=2, pathos=3, ethos=1, clash=2, rationale="x")
+    s = Score(
+        ping_round=1, side="dogs", structure=1, logos=2, pathos=3, ethos=1, clash=2, rationale="x"
+    )
     assert JudgeAgent._total(s) == 9
 
 
 def test_tiebreak_prefers_higher_clash():
     j = _judge()
     j.scores = [
-        Score(ping_round=1, side="dogs", structure=0, logos=0, pathos=0, ethos=0, clash=3, rationale=""),
-        Score(ping_round=1, side="cats", structure=0, logos=0, pathos=0, ethos=0, clash=1, rationale=""),
+        Score(
+            ping_round=1,
+            side="dogs",
+            structure=0,
+            logos=0,
+            pathos=0,
+            ethos=0,
+            clash=3,
+            rationale="",
+        ),
+        Score(
+            ping_round=1,
+            side="cats",
+            structure=0,
+            logos=0,
+            pathos=0,
+            ethos=0,
+            clash=1,
+            rationale="",
+        ),
     ]
     assert j._tie_break() == "dogs"
 
@@ -76,8 +102,26 @@ def test_tiebreak_prefers_higher_clash():
 def test_tiebreak_falls_through_to_pathos():
     j = _judge()
     j.scores = [
-        Score(ping_round=1, side="dogs", structure=0, logos=0, pathos=1, ethos=0, clash=2, rationale=""),
-        Score(ping_round=1, side="cats", structure=0, logos=0, pathos=3, ethos=0, clash=2, rationale=""),
+        Score(
+            ping_round=1,
+            side="dogs",
+            structure=0,
+            logos=0,
+            pathos=1,
+            ethos=0,
+            clash=2,
+            rationale="",
+        ),
+        Score(
+            ping_round=1,
+            side="cats",
+            structure=0,
+            logos=0,
+            pathos=3,
+            ethos=0,
+            clash=2,
+            rationale="",
+        ),
     ]
     assert j._tie_break() == "cats"
 
@@ -113,12 +157,33 @@ def test_extract_key_points_first_sentences():
 def test_decide_winner_no_tie():
     j = _judge()
     j.scores = [
-        Score(ping_round=1, side="dogs", structure=3, logos=3, pathos=3, ethos=3, clash=3, rationale=""),
-        Score(ping_round=1, side="cats", structure=1, logos=1, pathos=1, ethos=1, clash=1, rationale=""),
+        Score(
+            ping_round=1,
+            side="dogs",
+            structure=3,
+            logos=3,
+            pathos=3,
+            ethos=3,
+            clash=3,
+            rationale="",
+        ),
+        Score(
+            ping_round=1,
+            side="cats",
+            structure=1,
+            logos=1,
+            pathos=1,
+            ethos=1,
+            clash=1,
+            rationale="",
+        ),
     ]
     j.provider.complete.return_value = CompletionResponse(
         text='{"winner":"dogs","written_rationale":"dogs clashed harder"}',
-        input_tokens=1, output_tokens=1, model="m", provider="anthropic",
+        input_tokens=1,
+        output_tokens=1,
+        model="m",
+        provider="anthropic",
     )
     v = j.decide_winner(pings=[_ping(side="dogs"), _ping(side="cats")])
     assert isinstance(v, Verdict)
@@ -131,12 +196,33 @@ def test_decide_winner_breaks_tie():
     j = _judge()
     # Equal totals (10 each) but dogs has more clash
     j.scores = [
-        Score(ping_round=1, side="dogs", structure=2, logos=2, pathos=1, ethos=2, clash=3, rationale=""),
-        Score(ping_round=1, side="cats", structure=2, logos=2, pathos=3, ethos=2, clash=1, rationale=""),
+        Score(
+            ping_round=1,
+            side="dogs",
+            structure=2,
+            logos=2,
+            pathos=1,
+            ethos=2,
+            clash=3,
+            rationale="",
+        ),
+        Score(
+            ping_round=1,
+            side="cats",
+            structure=2,
+            logos=2,
+            pathos=3,
+            ethos=2,
+            clash=1,
+            rationale="",
+        ),
     ]
     j.provider.complete.return_value = CompletionResponse(
         text='{"winner":"cats","written_rationale":"placeholder"}',  # LLM says cats
-        input_tokens=1, output_tokens=1, model="m", provider="anthropic",
+        input_tokens=1,
+        output_tokens=1,
+        model="m",
+        provider="anthropic",
     )
     v = j.decide_winner(pings=[_ping(side="dogs"), _ping(side="cats")])
     # tie-break overrides LLM, picks dogs (higher clash)
@@ -153,12 +239,33 @@ def test_receive_ping_scores():
 def test_receive_finalize_returns_verdict():
     j = _judge()
     j.scores = [
-        Score(ping_round=1, side="dogs", structure=3, logos=3, pathos=3, ethos=3, clash=3, rationale=""),
-        Score(ping_round=1, side="cats", structure=0, logos=0, pathos=0, ethos=0, clash=0, rationale=""),
+        Score(
+            ping_round=1,
+            side="dogs",
+            structure=3,
+            logos=3,
+            pathos=3,
+            ethos=3,
+            clash=3,
+            rationale="",
+        ),
+        Score(
+            ping_round=1,
+            side="cats",
+            structure=0,
+            logos=0,
+            pathos=0,
+            ethos=0,
+            clash=0,
+            rationale="",
+        ),
     ]
     j.provider.complete.return_value = CompletionResponse(
         text='{"winner":"dogs","written_rationale":"clear"}',
-        input_tokens=1, output_tokens=1, model="m", provider="anthropic",
+        input_tokens=1,
+        output_tokens=1,
+        model="m",
+        provider="anthropic",
     )
     out = j.receive(FinalizeRequest(pings=[_ping()]))
     assert isinstance(out, Verdict)

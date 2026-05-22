@@ -22,7 +22,7 @@ Three AI agents — **Dogs** (logos + ethos), **Cats** (pathos + Socratic), and 
 
 ## TL;DR
 
-Run `uv sync`, copy `.env.example` to `.env` and add `ANTHROPIC_API_KEY=...`, then `uv run python -m debate`. Choose option 1 from the menu and a full 10-round debate runs end-to-end, producing a JSON transcript under `results/debates/` and a winner declared by the Judge. **165 tests · 96.26% coverage · ruff 0 violations.**
+Run `uv sync`, copy `.env.example` to `.env` and add `GOOGLE_API_KEY=...` (get one at https://aistudio.google.com/app/apikey), then `uv run python -m debate`. Choose option 1 from the menu and a full 10-round debate runs end-to-end, producing a JSON transcript under `results/debates/` and a winner declared by the Judge. **187 tests · 96.08% coverage · ruff 0 violations · format check clean.**
 
 ---
 
@@ -46,9 +46,9 @@ The Judge moderates all communication (no direct Dogs ↔ Cats). Every ping is J
 | 3 | Core code (schemas, providers, agents, orchestrator, SDK) | ✅ Complete |
 | 4 | Engineering (gatekeeper, watchdog, logger, search) | ✅ Complete |
 | 5 | RAG (embedder, store, ingest, 30 curated passages) | ✅ Complete |
-| 6 | Tests + coverage ≥ 85% | ✅ Complete — **96.26%** |
-| 7 | Polish (CLI menu, README full report, notebook, class diagram, Gemini provider) | ✅ Complete |
-| 8 | Submission | ⬜ Pending (Moodle upload) |
+| 6 | Tests + coverage ≥ 85% | ✅ Complete — **96.08%** (187 tests) |
+| 7 | Polish (CLI menu, README full report, notebook, class diagram, Gemini provider, Skills restructure) | ✅ Complete |
+| 8 | Submission (8.1 integration check ✅, 8.2 repo hygiene ✅) | 🟨 Automated checks done; awaiting real-API run + Moodle upload |
 
 See `docs/TODO.md` for the full ~600-task breakdown.
 

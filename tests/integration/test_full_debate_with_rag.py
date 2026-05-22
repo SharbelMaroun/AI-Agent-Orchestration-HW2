@@ -49,9 +49,7 @@ def _seed_corpus(root: Path, embedder) -> tuple[RAGStore, RAGStore]:
     return dogs_store, cats_store
 
 
-def test_full_debate_with_real_rag(
-    tmp_path: Path, fake_provider_factory, hash_embedder
-) -> None:
+def test_full_debate_with_real_rag(tmp_path: Path, fake_provider_factory, hash_embedder) -> None:
     dogs_store, cats_store = _seed_corpus(tmp_path / "corpus", hash_embedder)
     setup = load_setup(REPO_ROOT / "config" / "setup.json")
     data = setup.model_dump()
@@ -59,7 +57,8 @@ def test_full_debate_with_real_rag(
     setup = type(setup).model_validate(data)
 
     sdk = DebateSDK(
-        setup=setup, results_dir=tmp_path / "out",
+        setup=setup,
+        results_dir=tmp_path / "out",
         provider_factory=fake_provider_factory,
     )
 
@@ -83,7 +82,9 @@ def test_full_debate_with_real_rag(
         model_name=setup.models["judge"].name,
     )
     orch = Orchestrator(
-        topic=setup.topic, num_rounds=1, results_dir=tmp_path / "out",
+        topic=setup.topic,
+        num_rounds=1,
+        results_dir=tmp_path / "out",
     )
     result = orch.run_debate(dogs, cats, judge)
 

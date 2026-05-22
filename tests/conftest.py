@@ -51,10 +51,7 @@ def make_fake_provider_factory():
     The same canned-response logic the original SDK test used, lifted here so
     every full-debate test gets it for free.
     """
-    default_score = (
-        '{"structure":2,"logos":2,"pathos":2,"ethos":2,'
-        '"clash":2,"rationale":"ok"}'
-    )
+    default_score = '{"structure":2,"logos":2,"pathos":2,"ethos":2,"clash":2,"rationale":"ok"}'
     default_verdict = '{"winner":"dogs","written_rationale":"clear"}'
 
     def factory(_name: str):
@@ -71,12 +68,13 @@ def make_fake_provider_factory():
             else:
                 m = _OPP_ROUND_RE.search(last_user)
                 refers = m.group(1) if m else "null"
-                text = (
-                    f'{{"text":"argued","citations":[],"refers_to_ping":{refers}}}'
-                )
+                text = f'{{"text":"argued","citations":[],"refers_to_ping":{refers}}}'
             return CompletionResponse(
-                text=text, input_tokens=5, output_tokens=5,
-                model=model, provider="anthropic",
+                text=text,
+                input_tokens=5,
+                output_tokens=5,
+                model=model,
+                provider="anthropic",
             )
 
         provider.complete.side_effect = complete
@@ -141,7 +139,11 @@ def sample_score_factory():
         defaults: dict[str, Any] = {
             "ping_round": ping_round,
             "side": side,
-            "structure": 2, "logos": 2, "pathos": 2, "ethos": 2, "clash": 2,
+            "structure": 2,
+            "logos": 2,
+            "pathos": 2,
+            "ethos": 2,
+            "clash": 2,
             "rationale": "ok",
         }
         defaults.update(kw)

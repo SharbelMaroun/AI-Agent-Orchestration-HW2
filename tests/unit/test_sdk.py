@@ -17,16 +17,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def _fake_provider_factory(side_to_reply: dict[str, str] | None = None):
     """Return a factory that yields a MagicMock provider with a canned reply
     suitable for any DogsAgent / CatsAgent / JudgeAgent call."""
-    default_score = (
-        '{"structure":2,"logos":2,"pathos":2,"ethos":2,'
-        '"clash":2,"rationale":"ok"}'
-    )
+    default_score = '{"structure":2,"logos":2,"pathos":2,"ethos":2,"clash":2,"rationale":"ok"}'
     default_verdict = '{"winner":"dogs","written_rationale":"clear"}'
     import re as _re
+
     opp_round_re = _re.compile(r"Opponent's previous ping \(round (\d+)")
 
     def factory(_name: str):
         provider = MagicMock()
+
         def complete(*, system, messages, model, max_tokens):
             del max_tokens
             last_user = messages[-1].content if messages else ""
@@ -40,9 +39,13 @@ def _fake_provider_factory(side_to_reply: dict[str, str] | None = None):
                 refers = m.group(1) if m else "null"
                 text = f'{{"text":"argued","citations":[],"refers_to_ping":{refers}}}'
             return CompletionResponse(
-                text=text, input_tokens=5, output_tokens=5,
-                model=model, provider="anthropic",
+                text=text,
+                input_tokens=5,
+                output_tokens=5,
+                model=model,
+                provider="anthropic",
             )
+
         provider.complete.side_effect = complete
         return provider
 
@@ -82,14 +85,19 @@ def test_sdk_get_last_verdict_reads_disk_when_no_in_memory(tmp_path: Path):
     sdk1 = _sdk(tmp_path, num_rounds=1)
     sdk1.run_debate()
     # Fresh SDK, same results dir — should still find the persisted verdict.
-    sdk2 = DebateSDK(setup=sdk1.setup, results_dir=tmp_path, provider_factory=_fake_provider_factory())
+    sdk2 = DebateSDK(
+        setup=sdk1.setup, results_dir=tmp_path, provider_factory=_fake_provider_factory()
+    )
     v = sdk2.get_last_verdict()
     assert isinstance(v, Verdict)
 
 
 def test_sdk_get_last_verdict_none_when_empty(tmp_path: Path):
-    sdk = DebateSDK(setup=_sdk(tmp_path).setup, results_dir=tmp_path / "empty",
-                    provider_factory=_fake_provider_factory())
+    sdk = DebateSDK(
+        setup=_sdk(tmp_path).setup,
+        results_dir=tmp_path / "empty",
+        provider_factory=_fake_provider_factory(),
+    )
     assert sdk.get_last_verdict() is None
 
 

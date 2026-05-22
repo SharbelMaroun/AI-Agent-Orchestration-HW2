@@ -37,15 +37,24 @@ def test_ping_roundtrip_json():
 
 def test_score_roundtrip_json():
     s = Score(
-        ping_round=1, side="cats", structure=2, logos=1,
-        pathos=3, ethos=2, clash=2, rationale="solid open",
+        ping_round=1,
+        side="cats",
+        structure=2,
+        logos=1,
+        pathos=3,
+        ethos=2,
+        clash=2,
+        rationale="solid open",
     )
     assert Score.model_validate_json(s.model_dump_json()) == s
 
 
 def test_verdict_roundtrip_json():
     v = Verdict(
-        winner="dogs", dogs_total=42, cats_total=37, margin=5,
+        winner="dogs",
+        dogs_total=42,
+        cats_total=37,
+        margin=5,
         written_rationale="dogs clashed harder",
         key_points_dogs=["loyalty", "longevity"],
         key_points_cats=["independence"],
@@ -68,15 +77,23 @@ def test_envelope_extra_field_rejected():
 def test_score_dimension_out_of_range_rejected():
     with pytest.raises(ValidationError):
         Score(
-            ping_round=1, side="dogs", structure=4, logos=1,
-            pathos=1, ethos=1, clash=1, rationale="x",
+            ping_round=1,
+            side="dogs",
+            structure=4,
+            logos=1,
+            pathos=1,
+            ethos=1,
+            clash=1,
+            rationale="x",
         )
 
 
 def test_opening_brief_judge_has_optional_side():
     brief = OpeningBrief(
-        topic="cats vs dogs", num_rounds=10,
-        rules="be brief", rubric="5 dims, 0-3",
+        topic="cats vs dogs",
+        num_rounds=10,
+        rules="be brief",
+        rubric="5 dims, 0-3",
     )
     assert brief.side is None
     assert brief.type == "OPENING_BRIEF"

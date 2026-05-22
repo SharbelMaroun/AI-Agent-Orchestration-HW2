@@ -62,7 +62,9 @@ def test_full_debate_persists_to_disk(tmp_path: Path, fake_provider_factory) -> 
 def test_full_debate_pings_alternate_sides(tmp_path: Path, fake_provider_factory) -> None:
     sdk = _build_sdk(tmp_path, fake_provider_factory, num_rounds=3)
     result = sdk.run_debate()
-    sides_in_order = [p.side for p in sorted(result.pings, key=lambda p: (p.round, 0 if p.side == "dogs" else 1))]
+    sides_in_order = [
+        p.side for p in sorted(result.pings, key=lambda p: (p.round, 0 if p.side == "dogs" else 1))
+    ]
     expected = ["dogs", "cats"] * 3
     assert sides_in_order == expected
 
