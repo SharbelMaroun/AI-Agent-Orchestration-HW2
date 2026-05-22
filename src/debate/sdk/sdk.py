@@ -18,7 +18,7 @@ from debate.services.agents.cats_agent import CatsAgent
 from debate.services.agents.dogs_agent import DogsAgent
 from debate.services.agents.judge_agent import JudgeAgent
 from debate.services.orchestrator import Orchestrator
-from debate.shared.config import SetupConfig, load_setup
+from debate.shared.config import SetupConfig, load_env, load_setup
 from debate.shared.llm_provider.base import build_provider
 from debate.shared.schemas import DebateResult, Verdict
 
@@ -44,7 +44,10 @@ class DebateSDK:
         gatekeeper: Any | None = None,
         results_dir: Path | str = "results/debates",
         provider_factory: Callable[[str], Any] = build_provider,
+        dotenv_path: str | Path = ".env",
     ) -> None:
+        # Read .env before any provider tries to look up an API key.
+        load_env(dotenv_path)
         self.setup = setup if setup is not None else load_setup(setup_path)
         self.gatekeeper = gatekeeper or _PassthroughGatekeeper()
         self.results_dir = Path(results_dir)

@@ -272,6 +272,16 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-22 — Post-Phase-8 bug fix: SDK never loaded .env
+
+**Context:** First real-key run by Sharbel hit `RuntimeError: GOOGLE_API_KEY not set — required for provider 'google'`. The `.env` file was correctly populated; nothing was reading it.
+**Goal:** Plumb `python-dotenv` into the actual boot path so `os.environ.get("GOOGLE_API_KEY")` sees the value the user put in `.env`.
+**Root cause:** `debate.shared.config.load_env()` (a `python-dotenv` wrapper) existed since Phase 3.2 but no caller invoked it. The unit tests never failed because they always set env vars via `monkeypatch.setenv(...)`, bypassing `.env` entirely. The integration tests passed because they used mocked providers that don't check env vars.
+**Fix:** `DebateSDK.__init__` now calls `load_env(dotenv_path=".env")` as its first action — before `load_setup` and before any provider construction. Added `dotenv_path` constructor kwarg so tests can pass a tmp path.
+**Lesson:** Mocked tests pass even when the real boot path is broken. A "fresh-clone smoke test with real credentials" item belongs in Phase 8.1 — and would have caught this. Adding it to TODO §8.1. More generally: every external dependency the app reads (env, config files, network) needs a real end-to-end smoke at submission time, not just unit-level mocks.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
