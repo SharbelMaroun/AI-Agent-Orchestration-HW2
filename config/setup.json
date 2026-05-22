@@ -5,9 +5,9 @@
   "max_words_per_ping": 250,
   "budget_usd": 5.00,
   "models": {
-    "dogs":  { "provider": "google", "name": "gemini-3.1-flash-lite" },
-    "cats":  { "provider": "google", "name": "gemini-3.1-flash-lite" },
-    "judge": { "provider": "google", "name": "gemini-3.1-flash-lite" }
+    "dogs":  { "provider": "openai", "name": "gpt-4o-mini" },
+    "cats":  { "provider": "openai", "name": "gpt-4o-mini" },
+    "judge": { "provider": "openai", "name": "gpt-4o-mini" }
   },
   "timeouts": {
     "agent_response_seconds": 60,
