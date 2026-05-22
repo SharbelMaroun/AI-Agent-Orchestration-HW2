@@ -200,14 +200,14 @@ Pricing per model (USD per million tokens, list prices as of submission — veri
 
 | Provider | Model | Input $/M | Output $/M |
 |---|---|---:|---:|
+| Google | `gemini-3.1-flash-lite` | 0.10 | 0.40 |
 | Google | `gemini-2.5-flash` | 0.30 | 2.50 |
 | Google | `gemini-2.5-pro` | 1.25 | 10.00 |
-| Google | `gemini-2.5-flash-lite` | 0.10 | 0.40 |
 | Anthropic | `claude-haiku-4-5-20251001` | 0.80 | 4.00 |
 | Anthropic | `claude-sonnet-4-6` | 3.00 | 15.00 |
 | Anthropic | `claude-opus-4-7` | 15.00 | 75.00 |
 
-Default config uses `gemini-2.5-flash-lite` for all three agents (cheapest tier — under $0.10 per 10-round debate at current prices). Swap to `gemini-2.5-flash` / `gemini-2.5-pro` in `config/setup.json.models` if you want stronger reasoning at higher cost. Budget cap = $5.00 (`budget_usd`); the gatekeeper logs a WARNING at 80% and raises `BudgetExceededError` at 100%.
+Default config uses `gemini-3.1-flash-lite` for all three agents (cheapest tier — under $0.10 per 10-round debate at list prices). Swap to `gemini-2.5-flash` / `gemini-2.5-pro` in `config/setup.json.models` if you want stronger reasoning at higher cost. Budget cap = $5.00 (`budget_usd`); the gatekeeper logs a WARNING at 80% and raises `BudgetExceededError` at 100%.
 
 **Optimization strategies in this project:**
 1. **Prompt caching** — Anthropic provider marks the system prompt and first messages with `cache_control: { type: "ephemeral" }` (PRD_gatekeeper §9a). Cache reads cost 10% of base input price; the cost report exposes `cache_read_pct`.

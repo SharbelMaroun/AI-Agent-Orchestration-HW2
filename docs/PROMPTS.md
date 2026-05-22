@@ -295,6 +295,14 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-23 — Model bump: gemini-3.1-flash-lite
+
+**Context:** Sharbel pointed out that his other production app uses `gemini-3.1-flash-lite` — a model name newer than this assistant's training-data cutoff. Took it at face value; the Google SDK passes the model name through to the API verbatim, and an invalid name surfaces as an API error immediately.
+**Change:** `config/setup.json.models` updated for all three agents; pricing table entry added (same tier as the previous `gemini-2.5-flash-lite`: $0.10 input / $0.40 output per million tokens — confirmed with Sharbel).
+**Lesson:** Trust the user's lived experience with their own production stack over your own model-family knowledge — your training data has a cutoff; theirs is current.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
