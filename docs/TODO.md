@@ -416,19 +416,19 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [ ] Write `test_watchdog_clean_stop_terminates_children`
 - [ ] Write `test_watchdog_concurrent_heartbeats_safe`
 
-### 4.3 Logger (`shared/logger.py`)
-- [ ] Class `FifoRotatingHandler(logging.Handler)` (custom)
-- [ ] Logic: cap N files, M lines each, rotate FIFO (delete oldest)
-- [ ] Counter: per-file line count
-- [ ] Format: ISO-timestamp + level + module + message
-- [ ] JSON-structured option for cost log
-- [ ] Function: `get_logger(name, config) -> logging.Logger`
-- [ ] Function: `configure_root_logger(config)`
-- [ ] Write `test_logger_rotation_at_max_lines`
-- [ ] Write `test_logger_deletes_oldest_at_max_files`
-- [ ] Write `test_logger_writes_iso_timestamp`
-- [ ] Write `test_logger_multiprocessing_safe` (queue-based handler)
-- [ ] Write `test_logger_respects_level_from_config`
+### 4.3 Logger (`shared/logger.py`) ✅
+- [x] Class `FifoRotatingHandler(logging.Handler)` (custom)
+- [x] Logic: cap N files, M lines each, rotate FIFO (delete oldest)
+- [x] Counter: per-file line count
+- [x] Format: ISO-timestamp + level + module + message
+- [x] JSON-structured option for cost log (`get_cost_logger` + `log_cost_entry`)
+- [x] Function: `get_logger(name, config) -> logging.Logger`
+- [x] Function: `configure_root_logger(config)`
+- [x] Write `test_logger_rotation_at_max_lines`
+- [x] Write `test_logger_deletes_oldest_at_max_files`
+- [x] Write `test_logger_writes_iso_timestamp`
+- [ ] Write `test_logger_multiprocessing_safe` (queue-based handler) — deferred to Phase 4.2 when process model lands
+- [x] Write `test_logger_respects_level_from_config`
 
 ### 4.4 Web search (`services/tools/web_search.py`)
 - [ ] Class `WebSearch(gatekeeper)`

@@ -146,6 +146,21 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-22 — Phase 4.3: FIFO-rotating logger
+
+**Context:** CLAUDE.md §4.3 + PRD §4.1 mandate FIFO log rotation by *line count* (N files × M lines), not by byte size. Stdlib `RotatingFileHandler` rotates on bytes, so a custom handler was unavoidable.
+**Goal:** A `FifoRotatingHandler` that emits one line per record, opens a new file every `max_lines_per_file`, and deletes the oldest file once `max_files` is exceeded — plus an idempotent JSONL cost logger separate from the human-readable log.
+**Key design decisions:**
+  1. **Indexed file names (`debate-NNNNN.log`)** sorted by integer index. Simpler than timestamp suffixes and survives clock skew or files created in the same second. The next index is `max(existing) + 1`, so re-opening a populated directory continues from where the last run left off.
+  2. **Line counter is per-file, not global.** Reset to 0 inside `_open_new_file`. Rotation triggers strictly off the in-memory counter — never re-reads the file to count lines — so emit() stays O(1).
+  3. **Pruning happens *after* opening the new file**, not before. This guarantees an open writable stream exists at all times and avoids a race where the directory briefly has zero files.
+  4. **Cost logger is a sibling, not a child.** Lives at `debate.cost`, has its own handler list, `propagate=False`, and a `%(message)s`-only formatter. Reason: cost entries are machine-readable JSONL consumed by the cost report; mixing them into the human log forces grep-then-json gymnastics.
+  5. **Idempotency check via `logger.handlers`.** `get_cost_logger` returns the existing logger if handlers already attached. Calling it twice in tests or in the SDK constructor must not double-write each entry.
+**Result:** `src/debate/shared/logger.py` at ~150 LOC (under cap). 8 unit tests pass: rotation at max_lines, FIFO prune over max_files, invalid-param rejection, ISO timestamp shape, child-logger naming, level filtering, JSONL cost write, idempotent cost logger. Multiprocess-safe variant (queue-based handler) deferred to Phase 4.2 when the process model lands — single-process for now uses `threading.Lock` inside emit().
+**Lesson:** The non-obvious rotation bug to defend against is "what happens when the directory is non-empty at startup?" — answer: re-scan, continue from the highest index, then immediately prune. Tested by `test_handler_prunes_oldest_when_over_max_files`.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
