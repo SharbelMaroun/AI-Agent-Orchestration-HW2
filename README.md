@@ -247,6 +247,95 @@ project-root/
 
 ---
 
+## Problems encountered & how we solved them
+
+Every notable issue from the build — what broke, why, and the fix. Listed roughly in the order they came up.
+
+### Build-time issues
+
+| # | Problem | Root cause | Resolution |
+|---|---|---|---|
+| 1 | **`gatekeeper.py` exceeded the 150-LOC cap** in Phase 4.1 | Single file held the policy + rate-window mechanics + pricing math | Split into `gatekeeper.py` (policy), `rate_limiter.py` (`RollingWindow`, `ServiceState`, retry classifier, exceptions, `QueueStatus`), and `pricing.py` (`compute_cost`, `CostTracker`). All three stayed comfortably under 150 LOC. The split also clarified the public/internal boundary. |
+| 2 | **Ruff `SIM105` violation** on `try/except OSError/pass` in the FIFO logger | Older idiom for "swallow this specific error" | Replaced with `contextlib.suppress(OSError)` — same behavior, idiomatic. |
+| 3 | **ChromaDB rejected `{}` as metadata** in Phase 5 RAG tests | Chroma requires non-empty dicts | `RAGStore.add()` substitutes `{"_": "_"}` for any missing/empty metadata so callers don't need to know about the quirk. Documented inline. |
+| 4 | **ChromaDB rejected short collection names** (`"t"`, `"a"`, `"b"`) | Validation requires 3–512 chars `[a-zA-Z0-9._-]` | Test fixtures use `test_col`, `col_a`, `col_b`. Shipped agents already use 3+ char names (`dogs`, `cats`). |
+| 5 | **Two-debates-in-sequence test asserted file count** | Orchestrator filename timestamp is second-resolution → two runs in the same second collapse into one file | Test rewritten to assert *object isolation* between the two `DebateResult`s rather than file count. The orchestrator quirk is documented in PRD. |
+| 6 | **Ruff complained about notebook idioms** (dict comprehension, `zip` without `strict=`) | Notebooks are documentation, not source — different style trade-offs | `extend-exclude = ["notebooks"]` in `pyproject.toml [tool.ruff]`. |
+| 7 | **`test_config_loads_setup` broke after Gemini default switch** | The test asserted `provider == "anthropic"` | Relaxed to `provider in {"anthropic", "google", "openai"}` — the test was pinning an incidental, not a contract. |
+| 8 | **Skills used `prompts/*_system_prompt.md` flat files** instead of Lesson 05's `skill.md` directory shape | Vocabulary drift between rubric and implementation | Restructured to `skills/<side>/SKILL.md` with YAML frontmatter (name, description, side, style, version). Added `skill_loader.py` that strips frontmatter. Three agents updated in one commit; old `prompts/` deleted. |
+| 9 | **Mocked tests passed but `.env` wasn't loaded on real runs** — first real API call hit `GOOGLE_API_KEY not set` | `load_env()` existed in `shared/config.py` since Phase 3.2 but nothing in the boot path actually called it. Unit tests used `monkeypatch.setenv()`, bypassing `.env` entirely. | `DebateSDK.__init__` now calls `load_env(dotenv_path)` as its first action, before `load_setup` and before any provider construction. Added a real-key smoke step to Phase 8.1. |
+| 10 | **`python -m debate` failed** — `'debate' is a package and cannot be directly executed` | README documented `python -m debate` in three places, but the package had no `__main__.py` | Added `src/debate/__main__.py` (3 lines) that delegates to `cli()`. Both `python -m debate` and the entry-point script work now. |
+| 11 | **`refers_to_ping=None` from smaller models** — `ClashViolationError` on real Gemini run | `gpt-4o-mini`-class models reliably include optional fields; `gemini-2.5-flash-lite` drops them under load even when the prompt asks for them | `DebateAgent.handle_your_turn` auto-fills `refers_to_ping` from `envelope.previous_ping.round` when the model returns `None`. The structural field is unambiguous from envelope context; the *rhetorical* clash is scored separately by `JudgeAgent.clash`. Wrong-value cases (model returns `99` when expected `1`) still raise. |
+| 12 | **Gemini free-tier 20-RPD cap blocked a full 10-round debate** | 41 API calls in a debate vs. 20/day per-model free-tier limit | Switched all three agents to OpenAI `gpt-4o-mini` ($0.01–$0.02 per full debate at list price). The provider abstraction made this a one-line config change — no agent code touched. |
+| 13 | **`google.generativeai` deprecation warning** on every Gemini call | The package was deprecated in favor of `google-genai` | Cosmetic only — old SDK still works. Migration to `google-genai` left as a follow-up if Gemini becomes the chosen provider again. |
+| 14 | **`ruff format --check` failed on 29 files** during the Phase 8 sweep | `ruff check` had been the only gate — formatting drift accumulated | `just ci` recipe now bundles `lint + format-check + cov`. Applied `ruff format .` to bring everything into compliance. |
+| 15 | **`prompts/` vs. `.claude/skills/`** confusion — `/skills` in Claude Code didn't list our skills | Two different "Skills" with the same name: Claude Code's IDE feature (scans `.claude/skills/`) vs. Lesson 05's conceptual skill (in our `skills/` for runtime agent loading) | Documented the distinction; no code change. Our skills are consumed by the Python application at runtime, not by Claude Code at edit time. |
+| 16 | **Doc drift between spec docs and implementation** (caught twice during the session) | The three "working" docs (TODO, README, PROMPTS) were updated every commit, but the spec docs (PRD, PLAN, per-mechanism PRDs) were left as Phase 0 artifacts | Backfilled twice: once for Phase 4–6 deltas, once for Phase 7 (Gemini + Skills restructure). Now every spec doc has a Status header and an implementation-deltas section. |
+
+### Pre-submission gotchas still to handle (partner-runnable)
+
+- **Free-tier rate limits.** If you stay on Gemini, enable billing — 10-round debates need >20 calls per model.
+- **Manual Phase 1 transcript.** Two-CLI hand-driven debate; deliverable for the rubric.
+- **Screenshots.** Asset paths are already referenced in this README; partner just needs to drop the PNGs in `assets/`.
+
+---
+
+## Progress charts
+
+### Test count growth across phases
+
+```mermaid
+xychart-beta
+    title "Unit + integration test count by phase"
+    x-axis ["P3.3", "P3.5", "P3.10", "P4.3", "P4.1", "P4.complete", "P5", "P6", "P7", "P8"]
+    y-axis "Tests passing" 0 --> 200
+    bar [33, 38, 85, 93, 113, 127, 149, 165, 187, 188]
+    line [33, 38, 85, 93, 113, 127, 149, 165, 187, 188]
+```
+
+### Coverage trajectory
+
+```mermaid
+xychart-beta
+    title "Coverage % vs. 85% gate"
+    x-axis ["P3", "P4", "P5", "P6", "P7", "P8"]
+    y-axis "Coverage %" 80 --> 100
+    bar [85, 88, 92, 96, 96, 96]
+    line [85, 88, 92, 96, 96, 96]
+```
+
+(P6 jumped from 92→96 after the `test_coverage_topup.py` sweep brought `constants.py` from 0% → 100% and `watchdog.py` from 80% → 94%.)
+
+### Phase timeline
+
+```mermaid
+gantt
+    title Implementation timeline (single session, 2026-05-22 → 2026-05-23)
+    dateFormat HH:mm
+    axisFormat %H:%M
+
+    section Design
+    Phase 0 — PRD / PLAN / TODO     :done, p0, 09:00, 1h
+    section Bootstrap
+    Phase 2 — pyproject + skeleton  :done, p2, after p0, 30m
+    section Core
+    Phase 3 — schemas → SDK         :done, p3, after p2, 3h
+    section Engineering
+    Phase 4 — gatekeeper/watchdog   :done, p4, after p3, 2h
+    Phase 5 — RAG + corpora         :done, p5, after p4, 2h
+    section Quality
+    Phase 6 — tests + coverage      :done, p6, after p5, 1h30m
+    section Polish
+    Phase 7 — CLI + README + Gemini :done, p7, after p6, 2h
+    section Submission
+    Phase 8.1+8.2 — hygiene sweep   :done, p8, after p7, 30m
+    Real-key smoke + bug fixes      :active, smoke, after p8, 1h
+    Phase 1 — manual debate         :crit, p1, after smoke, 1h30m
+    Phase 8 — Moodle upload         :crit, sub, after p1, 30m
+```
+
+---
+
 ## Lessons learned & reflections
 
 Captured iteratively in [`docs/PROMPTS.md`](docs/PROMPTS.md) — every significant prompt or design decision recorded with context, goal, result, and a lesson. Highlights:
@@ -255,6 +344,8 @@ Captured iteratively in [`docs/PROMPTS.md`](docs/PROMPTS.md) — every significa
 - **Inject the clock and the scheduler, not just dependencies.** `Watchdog(clock=FakeClock(), sleep_fn=noop)` made wall-clock-dependent tests instant. Same pattern in the gatekeeper.
 - **Mirror prompt-level rules in deterministic code.** The Judge prompt says "ties are forbidden"; `JudgeAgent._tie_break` enforces it independently of what the LLM emits. Defense-in-depth at every contract.
 - **The 150-LOC cap is a feature.** Hitting it forced the `gatekeeper.py` / `rate_limiter.py` / `pricing.py` split, which clarified the public/internal boundary that would have stayed implicit otherwise.
+- **Mocked tests can mask boot-path bugs.** `monkeypatch.setenv()` made unit tests pass without ever exercising `python-dotenv` — the missing `load_env()` call was caught only by the first real-key smoke. Lesson 9 in the table above.
+- **Trust the user's lived experience over your knowledge cutoff.** When Sharbel said his other app uses `gemini-3.1-flash-lite`, the right move was to add it to the pricing table immediately rather than insist on the 2.5 family I knew about.
 
 ---
 
