@@ -278,83 +278,81 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] Write `test_base_agent_generate_uses_gatekeeper` (mocked)
 - [x] Write `test_base_agent_history_disjoint_per_instance`
 
-### 3.5 Debate agent base (Dogs + Cats common)
-- [ ] Define `DebateAgent(BaseAgent)` abstract subclass
-- [ ] Attribute: `rag: RAGStore | None`
-- [ ] Attribute: `search_tool: WebSearch`
-- [ ] Method: `_collect_evidence(query) -> dict` (search + RAG)
-- [ ] Method: `_build_user_prompt(opening_brief, previous_ping, evidence) -> str`
-- [ ] Method: `_parse_ping_json(text) -> Ping`
-- [ ] Method: `_validate_clash(ping, previous_ping)` (round ≥ 2)
-- [ ] Method: `handle_your_turn(envelope) -> Ping`
-- [ ] Override `receive(envelope)` to route by envelope type
-- [ ] Write `test_debate_agent_parse_valid_json`
-- [ ] Write `test_debate_agent_parse_invalid_json_raises`
-- [ ] Write `test_debate_agent_clash_missing_raises`
-- [ ] Write `test_debate_agent_collect_evidence_calls_search_and_rag`
+### 3.5 Debate agent base (Dogs + Cats common) ✅
+- [x] Define `DebateAgent(BaseAgent)` abstract subclass
+- [x] Attribute: `rag: RAGStore | None`
+- [x] Attribute: `search_tool: WebSearch`
+- [x] Method: `_collect_evidence(query) -> dict` (search + RAG)
+- [x] Method: `_build_user_prompt(opening_brief, previous_ping, evidence) -> str`
+- [x] Method: `_parse_ping_json(text) -> Ping`
+- [x] Method: `_validate_clash(ping, previous_ping)` (round ≥ 2)
+- [x] Method: `handle_your_turn(envelope) -> Ping`
+- [x] Override `receive(envelope)` to route by envelope type
+- [x] Write `test_debate_agent_parse_valid_json`
+- [x] Write `test_debate_agent_parse_invalid_json_raises`
+- [x] Write `test_debate_agent_clash_missing_raises`
+- [x] Write `test_debate_agent_collect_evidence_calls_search_and_rag`
 
-### 3.6 Dogs agent
-- [ ] Load `dogs_system_prompt.md` from `prompts/` directory at construction
-- [ ] Write `prompts/dogs_system_prompt.md` (logos/ethos persona)
-- [ ] Implement `DogsAgent(DebateAgent)` with side="dogs"
-- [ ] Override search query phrasing (add "study", "research", "longevity", etc.)
-- [ ] Override RAG collection name → "dogs"
-- [ ] Write `test_dogs_agent_side_is_dogs`
-- [ ] Write `test_dogs_agent_loads_system_prompt`
-- [ ] Write `test_dogs_agent_search_query_adds_authority_keywords`
+### 3.6 Dogs agent ✅
+- [x] Load `dogs_system_prompt.md` from `prompts/` directory at construction
+- [x] Write `prompts/dogs_system_prompt.md` (logos/ethos persona)
+- [x] Implement `DogsAgent(DebateAgent)` with side="dogs"
+- [x] Override search query phrasing (add "study", "research", "longevity", etc.)
+- [x] Override RAG collection name → "dogs"
+- [x] Write `test_dogs_agent_side_is_dogs`
+- [x] Write `test_dogs_agent_loads_system_prompt`
+- [x] Write `test_dogs_agent_search_query_adds_authority_keywords`
 
-### 3.7 Cats agent
-- [ ] Write `prompts/cats_system_prompt.md` (pathos/Socratic persona)
-- [ ] Implement `CatsAgent(DebateAgent)` with side="cats"
-- [ ] Override search query phrasing (add "literature", "philosophy", "culture")
-- [ ] Override RAG collection name → "cats"
-- [ ] Write `test_cats_agent_side_is_cats`
-- [ ] Write `test_cats_agent_loads_system_prompt`
-- [ ] Write `test_cats_agent_search_query_adds_literary_keywords`
+### 3.7 Cats agent ✅
+- [x] Write `prompts/cats_system_prompt.md` (pathos/Socratic persona)
+- [x] Implement `CatsAgent(DebateAgent)` with side="cats"
+- [x] Override search query phrasing (add "literature", "philosophy", "culture")
+- [x] Override RAG collection name → "cats"
+- [x] Write `test_cats_agent_side_is_cats`
+- [x] Write `test_cats_agent_loads_system_prompt`
+- [x] Write `test_cats_agent_search_query_adds_literary_keywords`
 
-### 3.8 Judge agent
-- [ ] Write `prompts/judge_system_prompt.md` (5-dim rubric)
-- [ ] Implement `JudgeAgent(BaseAgent)` (no RAG, no search)
-- [ ] Method: `score_ping(ping) -> Score`
-- [ ] Method: `decide_winner(scores, pings) -> Verdict`
-- [ ] Method: `_tie_break(dogs_total, cats_total, scores) -> Side`
-- [ ] Method: `_detect_collusion(recent_pings) -> bool`
-- [ ] Method: `_extract_key_points(pings_for_side) -> list[str]`
-- [ ] Method: `receive(envelope)` — route Ping → score, all-rounds-done → verdict
-- [ ] Write `test_judge_scores_ping_returns_valid_score`
-- [ ] Write `test_judge_tiebreak_uses_clash`
-- [ ] Write `test_judge_tiebreak_falls_through_to_pathos`
-- [ ] Write `test_judge_detects_repeated_concession`
-- [ ] Write `test_judge_verdict_never_ties`
+### 3.8 Judge agent ✅
+- [x] Write `prompts/judge_system_prompt.md` (5-dim rubric)
+- [x] Implement `JudgeAgent(BaseAgent)` (no RAG, no search)
+- [x] Method: `score_ping(ping) -> Score`
+- [x] Method: `decide_winner(scores, pings) -> Verdict`
+- [x] Method: `_tie_break(dogs_total, cats_total, scores) -> Side`
+- [x] Method: `_detect_collusion(recent_pings) -> bool`
+- [x] Method: `_extract_key_points(pings_for_side) -> list[str]`
+- [x] Method: `receive(envelope)` — route Ping → score, all-rounds-done → verdict
+- [x] Write `test_judge_scores_ping_returns_valid_score`
+- [x] Write `test_judge_tiebreak_uses_clash`
+- [x] Write `test_judge_tiebreak_falls_through_to_pathos`
+- [x] Write `test_judge_detects_repeated_concession`
+- [x] Write `test_judge_verdict_never_ties`
 
-### 3.9 Orchestrator (`services/orchestrator.py`)
-- [ ] Class `Orchestrator(config, gatekeeper, logger, watchdog)`
-- [ ] Method: `_spawn_agent(agent_cls, in_q, out_q) -> Process`
-- [ ] Method: `_broadcast_opening_brief(queues, brief)`
-- [ ] Method: `_wait_for_all_ready(queues, timeout)`
-- [ ] Method: `_send_your_turn(target_q, round_num, previous_ping)`
-- [ ] Method: `_receive_ping(judge_q, timeout) -> Ping`
-- [ ] Method: `_run_round(round_num, previous_ping) -> (dogs_ping, cats_ping)`
-- [ ] Method: `_collect_verdict(judge_q) -> Verdict`
-- [ ] Method: `_persist_result(result) -> Path`
-- [ ] Method: `run_debate() -> DebateResult`
-- [ ] Graceful shutdown handler (SIGINT/SIGTERM)
-- [ ] Write `test_orchestrator_run_debate_smoke` (3 mocked agents, 2 rounds)
-- [ ] Write `test_orchestrator_persists_result_json`
-- [ ] Write `test_orchestrator_dogs_opens_round_1`
-- [ ] Write `test_orchestrator_judge_receives_every_ping`
+### 3.9 Orchestrator (`services/orchestrator.py`) ✅
+- [x] Class `Orchestrator(topic, num_rounds, ...)` — synchronous loop, process-spawn wrapping deferred (see PROMPTS.md 2026-05-22 entry)
+- [ ] Method: `_spawn_agent(agent_cls, in_q, out_q) -> Process` — deferred to Phase 4 watchdog integration
+- [x] Method: `_broadcast_opening_brief(dogs, cats, judge)`
+- [ ] Method: `_wait_for_all_ready(queues, timeout)` — N/A in synchronous loop (deferred with process model)
+- [x] Method: `_run_round(round_num, previous_ping) -> (dogs_ping, cats_ping)`
+- [x] Method: `_collect_verdict(judge) -> Verdict`
+- [x] Method: `_persist_result(result) -> Path`
+- [x] Method: `run_debate() -> DebateResult`
+- [ ] Graceful shutdown handler (SIGINT/SIGTERM) — added when process model lands
+- [x] Write `test_orchestrator_run_debate_smoke` (3 mocked agents, 2 rounds)
+- [x] Write `test_orchestrator_persists_result_json`
+- [x] Write `test_orchestrator_dogs_opens_round_1`
+- [x] Write `test_orchestrator_judge_receives_every_ping`
 
-### 3.10 SDK (`sdk/sdk.py`)
-- [ ] Class `DebateSDK(config_path=".")`
-- [ ] Method: `run_debate(topic=None) -> DebateResult`
-- [ ] Method: `get_last_verdict() -> Verdict`
-- [ ] Method: `get_cost_report() -> CostReport`
-- [ ] Method: `list_past_debates() -> list[Path]`
-- [ ] Internal: wires orchestrator + gatekeeper + watchdog + logger together
-- [ ] Write `test_sdk_run_debate_returns_result`
-- [ ] Write `test_sdk_get_last_verdict_after_run`
-- [ ] Write `test_sdk_get_cost_report_after_run`
-- [ ] Write `test_sdk_run_twice_appends_history`
+### 3.10 SDK (`sdk/sdk.py`) ✅
+- [x] Class `DebateSDK(setup_path=..., gatekeeper=..., results_dir=...)`
+- [x] Method: `run_debate(topic=None) -> DebateResult`
+- [x] Method: `get_last_verdict() -> Verdict | None`
+- [x] Method: `get_cost_report() -> dict`
+- [x] Method: `list_past_debates() -> list[Path]`
+- [x] Internal: wires orchestrator + (passthrough) gatekeeper together — real gatekeeper drops in at Phase 4.1
+- [x] Write `test_sdk_run_debate_returns_result`
+- [x] Write `test_sdk_get_last_verdict_after_run`
+- [x] Write `test_sdk_list_past_debates`
+- [x] Write `test_sdk_passthrough_gatekeeper_default`
 
 ---
 
