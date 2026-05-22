@@ -1,0 +1,7 @@
+---
+source: Kramer et al., Circulation: Cardiovascular Quality and Outcomes, 2019
+type: study
+relevance: mortality, longevity, isolation
+---
+
+A 2019 meta-analysis published in Circulation pooled data from ten studies covering nearly four million participants and found that dog ownership was associated with a 24% reduction in all-cause mortality. The effect was strongest among individuals with pre-existing cardiovascular disease: dog-owning survivors of heart attacks had a 65% lower risk of dying in the following year compared to non-owners with the same medical profile. The mechanism is partly behavioral and partly social. Dogs require their owners to leave the house daily, which prevents the social isolation that strongly predicts mortality in older adults. Dogs also create incidental social interactions — neighbors, other dog walkers, veterinary visits — that maintain the social network whose decay is itself an independent mortality risk factor. No comparable mortality benefit has been demonstrated for cat ownership in pooled meta-analyses, though smaller individual studies have suggested benefits on specific outcomes. The dog effect remains, after a decade of replication, one of the most robust lifestyle-mortality findings in cardiovascular epidemiology.

@@ -1,0 +1,7 @@
+---
+source: Ownby et al., JAMA, 2002
+type: study
+relevance: children, immunity, allergies
+---
+
+A landmark 2002 JAMA study followed 474 children from birth to age seven and found that early-life exposure to two or more cats in the home reduced the risk of developing common allergies — including grass, dust mite, and pet allergies — by 67% compared to children with no early animal exposure. The mechanism appears to be immune tolerance: exposure during the critical first year of life trains the developing immune system to recognize harmless proteins as harmless. The effect was strongest for cats specifically, stronger than for dogs in the same dataset, and has been replicated in subsequent cohorts in Europe and Asia. Pediatric allergists, long believed cats were a risk factor for childhood allergy, have revised their counseling guidance in light of this and related work. A cat in the household of a newborn is now considered, by current evidence, a protective rather than a risk factor for atopic disease. The cat's quiet, persistent shedding — for decades treated as a nuisance — turns out to be a slow daily inoculation against the diseases of an over-sterilized modern life.

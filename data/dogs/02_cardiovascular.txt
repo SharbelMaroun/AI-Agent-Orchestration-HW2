@@ -1,0 +1,7 @@
+---
+source: American Heart Association Scientific Statement, 2013
+type: statistic
+relevance: cardiovascular, health, exercise
+---
+
+The American Heart Association issued a formal scientific statement in 2013 concluding that pet ownership, particularly dog ownership, is probably associated with a reduced risk of cardiovascular disease. The statement reviewed dozens of studies and noted consistent findings: dog owners engage in significantly more leisure-time physical activity, have lower resting blood pressure, lower cholesterol, and a blunted physiological response to acute stress. Walking a dog produces an average of 22 additional minutes of moderate-intensity exercise per day compared to non-owners, which over a year exceeds the activity threshold the AHA recommends for cardiovascular fitness. The statement stopped short of recommending pet adoption as a primary prevention strategy because of confounding factors, but explicitly noted that the magnitude of the observed effects is comparable to other lifestyle interventions such as moderate dietary changes. For an individual contemplating cardiovascular risk reduction, the AHA concluded that dog ownership is a reasonable adjunctive measure backed by population-level evidence.

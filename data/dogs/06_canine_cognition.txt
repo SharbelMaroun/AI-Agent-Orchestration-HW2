@@ -1,0 +1,7 @@
+---
+source: Stanley Coren, "The Intelligence of Dogs" (1994)
+type: quote
+relevance: cognition, intelligence, training
+---
+
+Psychologist Stanley Coren, drawing on surveys of professional dog trainers, documented that the average dog can learn 165 words, gestures, and signals, with exceptional individuals reaching 250 or more. Border Collies in research settings have learned the names of over 1,000 distinct objects. Dogs reliably follow human pointing gestures, an inferential skill that even chimpanzees struggle with despite their closer phylogenetic relationship to humans. This is not coincidence: tens of thousands of years of co-evolution selected for dogs who could read human social cues. Brian Hare's 2002 research at Duke demonstrated that puppies as young as six weeks, without prior training, can follow pointing more reliably than adult wolves raised by humans. Dogs also exhibit metacognition — they appear to know what they know — and pass mirror-style self-recognition tests using scent. The cognitive flexibility of dogs is not a curiosity; it is the substrate that makes them the only species reliably co-operating with humans across every culture on Earth.

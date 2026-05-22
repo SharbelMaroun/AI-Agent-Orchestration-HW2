@@ -1,0 +1,7 @@
+---
+source: von Muggenthaler, Fauna Communications Research Institute, 2001
+type: study
+relevance: healing, biology, sound
+---
+
+Bioacoustic researcher Elizabeth von Muggenthaler measured the purr frequencies of forty-four domestic cats and found that they cluster between 25 and 150 hertz — the exact frequency range used in therapeutic ultrasound to promote bone regrowth, ligament repair, and soft-tissue healing. The discovery raised an evolutionary puzzle: why would a creature evolve to vibrate at frequencies that aid tissue repair? One hypothesis is that purring evolved as a self-healing mechanism during the long periods of immobility that cats, as ambush predators, must endure between hunts. Cats fracture bones less often than other mammals of comparable mass, recover faster from surgery, and are notoriously hard to kill. Observational reports from veterinarians have long noted that injured cats purr more, not less — a behavior incompatible with the simple "purring expresses contentment" interpretation. The cat, even when alone, is producing a frequency that mends what is broken. To share a sofa with a purring cat is to be inside a low-frequency therapy chamber that no human technology has yet matched for elegance.
