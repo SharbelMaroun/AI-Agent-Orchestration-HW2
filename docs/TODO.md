@@ -278,20 +278,20 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] Write `test_base_agent_generate_uses_gatekeeper` (mocked)
 - [x] Write `test_base_agent_history_disjoint_per_instance`
 
-### 3.5 Debate agent base (Dogs + Cats common)
-- [ ] Define `DebateAgent(BaseAgent)` abstract subclass
-- [ ] Attribute: `rag: RAGStore | None`
-- [ ] Attribute: `search_tool: WebSearch`
-- [ ] Method: `_collect_evidence(query) -> dict` (search + RAG)
-- [ ] Method: `_build_user_prompt(opening_brief, previous_ping, evidence) -> str`
-- [ ] Method: `_parse_ping_json(text) -> Ping`
-- [ ] Method: `_validate_clash(ping, previous_ping)` (round ≥ 2)
-- [ ] Method: `handle_your_turn(envelope) -> Ping`
-- [ ] Override `receive(envelope)` to route by envelope type
-- [ ] Write `test_debate_agent_parse_valid_json`
-- [ ] Write `test_debate_agent_parse_invalid_json_raises`
-- [ ] Write `test_debate_agent_clash_missing_raises`
-- [ ] Write `test_debate_agent_collect_evidence_calls_search_and_rag`
+### 3.5 Debate agent base (Dogs + Cats common) ✅
+- [x] Define `DebateAgent(BaseAgent)` abstract subclass
+- [x] Attribute: `rag: RAGStore | None`
+- [x] Attribute: `search_tool: WebSearch`
+- [x] Method: `_collect_evidence(query) -> dict` (search + RAG)
+- [x] Method: `_build_user_prompt(opening_brief, previous_ping, evidence) -> str`
+- [x] Method: `_parse_ping_json(text) -> Ping`
+- [x] Method: `_validate_clash(ping, previous_ping)` (round ≥ 2)
+- [x] Method: `handle_your_turn(envelope) -> Ping`
+- [x] Override `receive(envelope)` to route by envelope type
+- [x] Write `test_debate_agent_parse_valid_json`
+- [x] Write `test_debate_agent_parse_invalid_json_raises`
+- [x] Write `test_debate_agent_clash_missing_raises`
+- [x] Write `test_debate_agent_collect_evidence_calls_search_and_rag`
 
 ### 3.6 Dogs agent
 - [ ] Load `dogs_system_prompt.md` from `prompts/` directory at construction

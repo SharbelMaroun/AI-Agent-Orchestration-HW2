@@ -117,6 +117,20 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-22 — Phase 3.5: DebateAgent (clash + JSON parsing + evidence)
+
+**Context:** Dogs and Cats share almost all per-turn machinery: gather evidence (search + RAG), build a prompt that includes the opponent's previous ping, call the LLM, parse the reply as a `Ping`, and validate the clash invariant. The persona-specific bits are tiny — different search query phrasing, different RAG collection, different system prompt. Per CLAUDE.md §4 ("same method in 3+ classes → base class") the shared logic belongs in `DebateAgent`, not duplicated in DogsAgent/CatsAgent.
+**Goal:** Encode clash + parsing as enforced invariants on the base class, so a future bug in either persona can't bypass them.
+**Decisions:**
+  1. **`_parse_ping_json` accepts JSON embedded in prose.** Models often emit `"Sure, here's the ping: { ... }"`. A naive `json.loads(text)` fails on the preface. The regex `r"\{.*\}"` with DOTALL grabs the first complete-looking object. Strict parsers feel principled but in practice they cause flakes — accept the prose, validate the schema.
+  2. **`_validate_clash` is a static method that raises `ClashViolationError`.** Round 1 is exempt (no opponent ping yet). Round ≥ 2 must set `refers_to_ping = previous_ping.round`. Making it static + raising (rather than a boolean check inside the agent) means the orchestrator could call it on a Ping coming off the wire if we ever needed defense-in-depth.
+  3. **`RAGLike` and `SearchLike` as Protocols.** Neither concrete class exists yet (Phase 4.4 / 5.2). Protocols let the agent code compile and be tested today, and the real implementations drop in without changing the agent.
+  4. **Ruff `N818` on `ClashViolation`.** The Phase 2 PROMPTS entry already committed us to `…Error` suffixes for custom exceptions. Renamed to `ClashViolationError` on first lint pass — confirms the value of locking that convention in early.
+**Result:** 15 new tests (50 total). `debate_agent.py` at 123 LOC. Ruff clean.
+**Lesson:** When the LLM is on one side of a parser, be liberal in what you accept and strict in what the parser emits. Prose around a JSON block is the rule, not the exception — and the cost of a tolerant pre-extractor is far less than a 1-in-20 test flake.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
