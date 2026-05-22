@@ -93,7 +93,7 @@ The CLI is a simple keyboard-driven menu:
   AI Agent Orchestration HW2 — Dogs vs Cats Debate
 ==============================================================
 
-  [1] Run a new debate
+  [1] Run a new debate    <- streams every ping + judge score live as the debate runs
   [2] View last verdict
   [3] View cost report
   [4] List past debates
@@ -180,7 +180,7 @@ Current state (Phase 7 close):
 
 | Metric | Threshold (CLAUDE.md) | Actual |
 |---|---|---|
-| Test count | — | **188** (165 prior + 15 CLI + 7 Gemini provider + 1 from defensive auto-fill split) |
+| Test count | — | **190** (188 prior + 2 for the orchestrator live-event callback) |
 | Coverage | ≥ 85% | **96%+** |
 | Ruff violations | 0 | **0** |
 | File LOC | ≤ 150 (code lines) | All ≤ 150 |
