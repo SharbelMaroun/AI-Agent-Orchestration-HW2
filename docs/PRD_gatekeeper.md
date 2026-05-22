@@ -1,6 +1,7 @@
 # PRD — API Gatekeeper
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Source: `CLAUDE.md` §5
+**Status:** Implemented Phase 4.1. Class split into `gatekeeper.py` (policy) + `rate_limiter.py` (internals: `RollingWindow`, `ServiceState`, `is_retryable`, exceptions, `QueueStatus`) + `pricing.py` (`compute_cost`, `CostTracker`) to honor the 150-LOC cap. Public contract unchanged.
 
 ---
 
@@ -36,13 +37,25 @@ class ApiGatekeeper:
 Read from `config/rate_limits.json` — see `PLAN.md §7`. Pricing table read from `config/setup.json.pricing` or hardcoded in a Pydantic `PricingTable`:
 
 ```python
+# Per-provider per-model pricing (see config/setup.json.pricing for the live values).
 PRICING = {
-  "claude-haiku-4-5-20251001": {"input_per_million_usd": 0.80,  "output_per_million_usd": 4.00},
-  "claude-sonnet-4-6":         {"input_per_million_usd": 3.00,  "output_per_million_usd": 15.00},
-  "claude-opus-4-7":           {"input_per_million_usd": 15.00, "output_per_million_usd": 75.00},
+  "google": {
+    "gemini-2.5-flash":      {"input_per_million_usd": 0.30, "output_per_million_usd": 2.50},
+    "gemini-2.5-pro":        {"input_per_million_usd": 1.25, "output_per_million_usd": 10.00},
+    "gemini-2.5-flash-lite": {"input_per_million_usd": 0.10, "output_per_million_usd": 0.40},
+  },
+  "anthropic": {
+    "claude-haiku-4-5-20251001": {"input_per_million_usd": 0.80,  "output_per_million_usd": 4.00},
+    "claude-sonnet-4-6":         {"input_per_million_usd": 3.00,  "output_per_million_usd": 15.00},
+    "claude-opus-4-7":           {"input_per_million_usd": 15.00, "output_per_million_usd": 75.00},
+  },
+  "openai": {
+    "gpt-4o-mini": {"input_per_million_usd": 0.15, "output_per_million_usd": 0.60},
+    "gpt-4o":      {"input_per_million_usd": 2.50, "output_per_million_usd": 10.00},
+  },
 }
 ```
-(Pricing values are placeholders; verify against current Anthropic pricing before final submission.)
+(Pricing values are list prices; verify against current provider pricing before the final submission run.)
 
 ## 5. Cost tracking
 Every LLM call:
@@ -72,8 +85,8 @@ Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of b
 - Backoff: `retry_after_seconds × attempt_number`.
 - Max attempts from config (default 3). Final failure → raise `ApiCallFailedError`.
 
-## 9. Cybersecurity hook
-`execute()` accepts optional `sanitize: Callable[[str], str]` to clean prompts before sending (e.g., strip secrets from environment, mask emails). Default: no-op.
+## 9. Cybersecurity hook — Deferred
+**Status:** Not implemented in Phase 4.1. `execute()` does not yet accept a `sanitize` callable. The decision: until we have a documented incident class to defend against (PII leak, prompt-injection through search results, etc.), adding a no-op hook is dead weight. Will land when one of the following triggers: (a) we route real user input through the gatekeeper; (b) web-search results contain mixed user content we don't fully trust. Tracked as a deferred item in `docs/TODO.md` §4.1.
 
 ## 9a. Prompt caching (Anthropic)
 - Mark the system prompt and the first ~3 turns of conversation history with `cache_control: { type: "ephemeral" }` on every call.

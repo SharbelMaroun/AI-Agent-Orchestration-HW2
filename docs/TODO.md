@@ -10,6 +10,53 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 
 ---
 
+## Phase 7 — Polish: terminal menu, README, notebook, screenshots ✅ (added section)
+
+### 7.1 Terminal menu (`src/debate/main.py`) ✅
+- [x] Implement `cli()` entry point with `run_menu()` loop
+- [x] Option 1: Run debate → `sdk.run_debate()`
+- [x] Option 2: View last verdict
+- [x] Option 3: View cost report
+- [x] Option 4: List past debates
+- [x] Option 5: Open past debate transcript (file picker)
+- [x] Option Q: Quit + EOF treated as quit
+- [x] Pretty-print Ping (round, side, text, citations)
+- [x] Pretty-print Verdict (winner, totals, rationale)
+- [x] Pretty-print cost report (by-model breakdown + cache pct)
+- [x] Handle KeyboardInterrupt → exit 130
+- [x] 15 tests in `tests/unit/test_cli.py`
+
+### 7.2 README (`README.md`) ✅
+- [x] Full submission-ready rewrite with TL;DR, install, usage, architecture, tests, cost analysis, sample output, troubleshooting, contribution, credits
+
+### 7.3 Analysis notebook (`notebooks/analysis.ipynb`) ✅
+- [x] Verdict pretty-print + total-score bar + dimension stacked-bar + clash-per-round line + cost breakdown table + LaTeX cost formula + conclusion cell
+- [ ] Run against a real debate result + populate the conclusion cell — partner-runnable
+
+### 7.4 Cost analysis table ⬜ (deferred — needs real API run)
+- [ ] Run a full real debate, capture cost_log.jsonl, populate Table 4 — partner deliverable
+
+### 7.5 Class diagram artifact ✅
+- [x] Mermaid class diagram embedded in `docs/PLAN.md` §4 (with text fallback in §4a)
+
+### 7.7 Skills restructure ✅ (added during Phase 7, per Lesson 05 §5)
+- [x] Created `skills/dogs/SKILL.md`, `skills/cats/SKILL.md`, `skills/judge/SKILL.md` — each a directory containing a `SKILL.md` with YAML frontmatter (`name`, `description`, `side`, `style`, `version`) + the system prompt body
+- [x] `src/debate/shared/skill_loader.py` — `load_skill(path)` reads the file and strips frontmatter before returning the body
+- [x] `DogsAgent` / `CatsAgent` / `JudgeAgent` constructors: replaced `prompt_path=` kwarg with `skill_path=`; default points at the skill directory
+- [x] Deleted obsolete `prompts/` directory
+- [x] `test_skill_files_exist_on_disk` guards the new paths
+
+### 7.6 Provider expansion ✅ (added during Phase 7)
+- [x] `GoogleProvider` (Gemini) implemented at `src/debate/shared/llm_provider/google_provider.py`
+- [x] `google-generativeai` dep added to `pyproject.toml`
+- [x] Provider registered in `llm_provider/__init__.py`
+- [x] `setup.json.models` default flipped to `gemini-2.5-flash` (Dogs/Cats) + `gemini-2.5-pro` (Judge)
+- [x] `setup.json.pricing.google` populated for cost tracking
+- [x] `.env.example` updated — GOOGLE_API_KEY required, ANTHROPIC + OPENAI optional
+- [x] 7 unit tests in `tests/unit/test_google_provider.py` (mocked SDK)
+
+---
+
 ## Phase 0 — Documentation & Design (currently 🟨)
 
 ### 0.1 Repository scaffolding

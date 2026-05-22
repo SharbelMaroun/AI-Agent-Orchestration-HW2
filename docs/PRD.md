@@ -1,8 +1,8 @@
 # Product Requirements Document — AI Agent Debate (HW2)
 
 **Project:** AI-Agent-Orchestration-HW2 · **Topic:** Cats vs Dogs as the better pet
-**Version:** 1.00 · **Status:** Draft
-**Authors:** Sharbel Maroun + partner
+**Version:** 1.00 · **Status:** Approved (spec stable; mid-implementation deltas tracked in `docs/TODO.md`)
+**Authors:** Sharbel Maroun + Amr Safadi
 
 ---
 
@@ -145,7 +145,7 @@ All IPC messages: JSON with versioned schema. See `docs/PRD_judge.md` §schema.
 ## 5. Assumptions, Dependencies, Constraints
 
 ### 5.1 Assumptions
-- **LLM provider is configurable.** Default = Anthropic Claude. The code uses an `LLMProvider` abstraction (see `PLAN.md` ADR-009) so any supported provider can be selected per-agent via `config/setup.json`.
+- **LLM provider is configurable.** Default = Google Gemini (`gemini-2.5-flash` for Dogs/Cats, `gemini-2.5-pro` for the Judge). The code uses an `LLMProvider` abstraction (see `PLAN.md` ADR-009) with three registered providers — `google`, `anthropic`, `openai` — selectable per-agent via `config/setup.json.models`.
 - Web search tool = a free or low-cost provider (e.g., DuckDuckGo API, Tavily free tier).
 - Embedding model for RAG = `sentence-transformers/all-MiniLM-L6-v2` (local, free) — independent of LLM provider choice.
 - Vector store = ChromaDB (local, embedded, zero-setup).
@@ -155,24 +155,25 @@ All IPC messages: JSON with versioned schema. See `docs/PRD_judge.md` §schema.
 ### 5.1a Environment Variables (`.env`)
 Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A committed `.env.example` documents every variable the project may read.
 
-- `ANTHROPIC_API_KEY` — required if any agent uses provider `"anthropic"` (default config: all three agents do).
+- `GOOGLE_API_KEY` — required for the default config (all three agents use Google Gemini).
+- `ANTHROPIC_API_KEY` — required only if any agent's `provider` is set to `"anthropic"`.
 - `OPENAI_API_KEY` — required only if any agent's `provider` is set to `"openai"`.
-- `GOOGLE_API_KEY` — required only if any agent's `provider` is set to `"google"`.
 - `TAVILY_API_KEY` — optional, only if web search falls back to Tavily.
 
-**One API key serves all three agents using the same provider.** Keys are account-level, not per-agent. If all three agents use Anthropic, only `ANTHROPIC_API_KEY` is needed.
+**One API key serves all three agents using the same provider.** Keys are account-level, not per-agent. If all three agents use Google, only `GOOGLE_API_KEY` is needed.
 
-### 5.2 Dependencies (planned)
-- `anthropic` — Anthropic provider implementation
-- `openai` — OpenAI provider (optional; included so the abstraction is testable)
+### 5.2 Dependencies (as installed)
+- `google-generativeai` — Gemini provider (default)
+- `anthropic` — Anthropic provider
+- `openai` — OpenAI provider (optional extra; install via `uv sync --extra openai`)
 - `chromadb` — vector store
 - `sentence-transformers` — embeddings
 - `duckduckgo-search` — web search
 - `pydantic` — JSON schema validation + `LLMProvider` types
-- `pytest` + `pytest-cov` — testing
-- `ruff` — linting
 - `python-dotenv` — env var loading
-- `uv` — package + task manager
+- `rich` — CLI menu rendering
+- **Dev group:** `pytest` + `pytest-cov` + `ruff`
+- **Package manager:** `uv`
 
 ### 5.3 Constraints
 - **Budget:** soft cap configured in `config/setup.json`. Alert before exceeding.
@@ -192,15 +193,17 @@ Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A commit
 
 ## 6. Phases & Timeline
 
-| Phase | Deliverable | Status |
-|---|---|---|
-| 0 | Docs (this PRD + PLAN + per-mechanism PRDs) | In progress |
-| 1 | Manual debate (two Claude CLI windows by hand, full transcript captured) | Not started |
-| 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | Not started |
-| 3 | Add gatekeeper + watchdog + FIFO logs + tests | Not started |
-| 4 | Add RAG to Pro and Con | Not started |
-| 5 | Polish: terminal menu, README screenshots, analysis notebook, cost report | Not started |
-| 6 | Submission: pyproject.toml clean, public repo, Moodle PDF | Not started |
+PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md` for the ~600-task breakdown and per-sub-phase status.
+
+| Phase | Deliverable | TODO phases | Status |
+|---|---|---|---|
+| 0 | Docs (this PRD + PLAN + per-mechanism PRDs + TODO + PROMPTS) | TODO Phase 0 | ✅ Complete |
+| 1 | Manual debate (two Claude CLI windows by hand, full transcript captured) | TODO Phase 1 | ⬜ Not started — partner-runnable |
+| 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | TODO Phase 2 + 3 | ✅ Complete |
+| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (165 tests · 96.26% coverage) |
+| 4 | Add RAG to Pro and Con | TODO Phase 5 | ✅ Complete (30 curated passages, ChromaDB persistent) |
+| 5 | Polish: terminal menu, README screenshots, analysis notebook, cost report | TODO Phase 7 | ⬜ Not started |
+| 6 | Submission: pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ⬜ Not started |
 
 ---
 

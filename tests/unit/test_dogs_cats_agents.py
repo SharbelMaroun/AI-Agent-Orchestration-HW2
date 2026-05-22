@@ -77,8 +77,8 @@ def test_cats_round1_query_has_literary_keywords():
     assert "literature" in q and "philosophy" in q
 
 
-def test_prompt_files_exist_on_disk():
-    """Guard against the prompts/ directory being deleted accidentally."""
-    assert Path("prompts/dogs_system_prompt.md").exists()
-    assert Path("prompts/cats_system_prompt.md").exists()
-    assert Path("prompts/judge_system_prompt.md").exists()
+def test_skill_files_exist_on_disk():
+    """Guard against the skills/ directory being deleted accidentally."""
+    assert Path("skills/dogs/SKILL.md").exists()
+    assert Path("skills/cats/SKILL.md").exists()
+    assert Path("skills/judge/SKILL.md").exists()

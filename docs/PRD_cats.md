@@ -1,6 +1,7 @@
 # PRD — Cats Agent
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Side: `cats` · Style: **pathos + Socratic**
+**Status:** Implemented Phase 3.7 (Skill restructured in Phase 7.7 per Lesson 05 §5). Skill at `skills/cats/SKILL.md`; RAG corpus at `data/cats/*.txt` (15 passages, max 196 words each).
 
 ---
 
