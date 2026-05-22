@@ -161,6 +161,38 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-22 — Phase 4.1: ApiGatekeeper (rate limits, retries, cost, budget)
+
+**Context:** CLAUDE.md §5 + PRD_gatekeeper.md require a single chokepoint for every external API call. The SDK's passthrough gatekeeper got us through Phase 3; Phase 4.1 replaces the *capabilities* (the SDK contract stays the same).
+**Goal:** A synchronous `ApiGatekeeper.execute(callable, ...)` that handles rate limits, retries, concurrency caps, cost tracking with cache-token accounting, and a budget warning + hard limit — without breaking the existing `GatekeeperLike` Protocol the agents already use.
+**Key design decisions:**
+  1. **Rolling minute + hour windows, not token-bucket.** Two `deque[float]` per service: prune entries older than the window, count remaining, gate the call. O(1) amortised. A token bucket would have been cleaner for steady-state but harder to test deterministically — windows let a test push wall-clock-independent timestamps if it wants.
+  2. **"Queue" implemented as bounded `pending` counter, not a real `queue.Queue`.** PRD §7 calls for FIFO queueing with backpressure. In a synchronous `execute()` that's effectively "block in `_wait_for_slot` and raise `QueueFullError` when `pending >= queue_max_depth`." We avoid a parallel drainer thread until the orchestrator goes multi-process in Phase 4.2; the contract (FIFO, backpressure, overflow raises) is preserved.
+  3. **`_record` runs only for `CompletionResponse`.** Search and embedding calls return their own shapes — we'd corrupt the cost report by trying to extract tokens from them. The `isinstance` gate is the chokepoint: any return type we add cost tracking for in the future has to opt in here, deliberately.
+  4. **Cache tokens stored as separate columns, not summed into `input_tokens`.** Pricing-wise they're 1.25× (write) and 0.10× (read) of base input — combining them would hide the savings. The cost report exposes `cache_read_pct` for the README's optimization narrative.
+  5. **Internals (`RollingWindow`, `ServiceState`, `is_retryable`, exceptions, `QueueStatus`) live in `rate_limiter.py`.** Keeps `gatekeeper.py` at 145 LOC, well under the 150 cap. The class itself is the only public name — the sibling module is a deliberate "ignore me unless you're hacking on the gatekeeper" signal.
+  6. **`sleep_fn` is injected.** Tests pass `lambda _s: None` to skip retry/queue waits entirely. Without that, the rate-limit + retry tests would be O(seconds) of real wall-clock time and produce flakiness.
+**Result:** `gatekeeper.py` + `pricing.py` + `rate_limiter.py`, all under cap. 20 new unit tests (6 pricing + 14 gatekeeper) covering happy path, 429/500/503 retries, timeout retries, non-retryable propagation, max-retries→`ApiCallFailedError`, concurrent_max enforcement (real threads, asserts max-in-flight == 2), budget warning fires once, budget exceeded raises, queue full raises, cost logger receives the JSONL entry. Total: 113 pass, ruff clean.
+**Lesson:** The 150-LOC cap is a feature, not a constraint. Hitting it forced the `rate_limiter.py` split, which produced a cleaner mental model: "gatekeeper is the policy; rate_limiter is the mechanism." If the file had been allowed to grow to 200 LOC, the public/internal distinction would have stayed implicit.
+
+---
+
+## 2026-05-22 — Phase 4.2 + 4.4: Watchdog + WebSearch
+
+**Context:** Closing out Phase 4 of the engineering layer. Watchdog (4.2) and WebSearch (4.4) needed to land before Phase 5 (RAG) so the agent-side service contract is finalized before we start wiring evidence collection.
+**Goal:** Two small, sharply-scoped services: a `Watchdog` that detects hung agents and a `WebSearch` that proxies DuckDuckGo through the gatekeeper. Both must be testable without real threads or real network.
+**Key design decisions:**
+  1. **`Watchdog.check_once()` is public-but-internal.** The PRD asks for a daemon-thread monitor (and we ship one), but exposing a single deterministic pass over all registered agents made the entire test suite for restarts/fatal-detection wall-clock-independent. `_loop()` is just a `while not stop: check_once(); sleep(poll)` wrapper. The same pattern as `sleep_fn` injection in the gatekeeper — give tests the *unit of work*, not the schedule.
+  2. **Fatal agents flagged in-place, not removed.** When an agent exceeds `max_restarts_per_agent` we set `entry.fatal = True` and append to `_fatal_agents`. Future `check_once()` calls skip fatal entries. Removing the entry would lose history; the orchestrator inspects `fatal_agents()` to decide whether to abort the debate.
+  3. **`restart_fn` is a zero-arg callable returning the new process (or None).** Kept narrow so the orchestrator can close over whatever state it needs (system prompt, history-to-date, RAG store) — the Watchdog stays oblivious to per-agent state. Matches PRD §5 "orchestrator owns the history; not the child."
+  4. **`WebSearch.backend` is an injection point.** Default = `DDGBackend` wrapping `duckduckgo_search.DDGS`. Tests pass a `MagicMock` with `.query()`. No network in unit tests, no need to mock the DDG package itself. The contract is "any object with `.query(query, max_results) -> list[dict]`."
+  5. **Backend errors return `[]`, not raise.** PRD §5 says "Handle empty results gracefully." Logging-but-swallowing is the right default for an evidence-collection tool: a single ping failing search ≠ aborting the debate. Tested via `test_search_swallows_backend_errors`.
+  6. **No Tavily fallback yet.** PRD lists it but it's a behind-feature-flag fallback — building it before we have evidence that DDG rate-limits us in real runs would be speculative. Deferred with explicit TODO note.
+**Result:** Two new modules (`watchdog.py` at 136 LOC, `web_search.py` at 54 LOC). 14 new tests (9 watchdog + 5 web search) — all 127 pass, ruff clean, all files ≤ 150 LOC. Phase 4 closes with five sibling services (gatekeeper, watchdog, logger, web search, constants) and a clear seam for Phase 5 RAG to bolt onto: `DebateAgent._collect_evidence` is the only call site that needs to add the RAG retrieve hop.
+**Lesson:** Inject the *clock* and the *scheduler*, not just dependencies. Watchdog tests would have been minutes of sleep-and-pray without `clock=FakeClock(); sleep_fn=noop`. Same trick that made gatekeeper tests instant. Any time-based component should expose both seams from the start.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
