@@ -200,7 +200,7 @@ PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md
 | 0 | Docs (this PRD + PLAN + per-mechanism PRDs + TODO + PROMPTS) | TODO Phase 0 | ✅ Complete |
 | 1 | Manual debate (two Claude CLI windows by hand, full transcript captured) | TODO Phase 1 | ⬜ Not started — partner-runnable |
 | 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | TODO Phase 2 + 3 | ✅ Complete |
-| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (165 tests · 96.26% coverage) |
+| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (187 tests · 96.08% coverage) |
 | 4 | Add RAG to Pro and Con | TODO Phase 5 | ✅ Complete (30 curated passages, ChromaDB persistent) |
 | 5 | Polish: terminal menu, README screenshots, analysis notebook, cost report | TODO Phase 7 | ⬜ Not started |
 | 6 | Submission: pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ⬜ Not started |
