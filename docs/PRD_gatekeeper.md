@@ -37,13 +37,25 @@ class ApiGatekeeper:
 Read from `config/rate_limits.json` — see `PLAN.md §7`. Pricing table read from `config/setup.json.pricing` or hardcoded in a Pydantic `PricingTable`:
 
 ```python
+# Per-provider per-model pricing (see config/setup.json.pricing for the live values).
 PRICING = {
-  "claude-haiku-4-5-20251001": {"input_per_million_usd": 0.80,  "output_per_million_usd": 4.00},
-  "claude-sonnet-4-6":         {"input_per_million_usd": 3.00,  "output_per_million_usd": 15.00},
-  "claude-opus-4-7":           {"input_per_million_usd": 15.00, "output_per_million_usd": 75.00},
+  "google": {
+    "gemini-2.5-flash":      {"input_per_million_usd": 0.30, "output_per_million_usd": 2.50},
+    "gemini-2.5-pro":        {"input_per_million_usd": 1.25, "output_per_million_usd": 10.00},
+    "gemini-2.5-flash-lite": {"input_per_million_usd": 0.10, "output_per_million_usd": 0.40},
+  },
+  "anthropic": {
+    "claude-haiku-4-5-20251001": {"input_per_million_usd": 0.80,  "output_per_million_usd": 4.00},
+    "claude-sonnet-4-6":         {"input_per_million_usd": 3.00,  "output_per_million_usd": 15.00},
+    "claude-opus-4-7":           {"input_per_million_usd": 15.00, "output_per_million_usd": 75.00},
+  },
+  "openai": {
+    "gpt-4o-mini": {"input_per_million_usd": 0.15, "output_per_million_usd": 0.60},
+    "gpt-4o":      {"input_per_million_usd": 2.50, "output_per_million_usd": 10.00},
+  },
 }
 ```
-(Pricing values are placeholders; verify against current Anthropic pricing before final submission.)
+(Pricing values are list prices; verify against current provider pricing before the final submission run.)
 
 ## 5. Cost tracking
 Every LLM call:

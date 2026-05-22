@@ -22,7 +22,7 @@ def test_config_loads_setup():
     assert cfg.version == "1.00"
     assert cfg.num_rounds >= 1
     assert {"dogs", "cats", "judge"}.issubset(cfg.models.keys())
-    assert cfg.models["dogs"].provider == "anthropic"
+    assert cfg.models["dogs"].provider in {"anthropic", "google", "openai"}
 
 
 def test_config_loads_rate_limits():

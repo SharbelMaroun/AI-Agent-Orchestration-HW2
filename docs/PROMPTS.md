@@ -226,6 +226,38 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-22 — Phase 7: terminal menu, full README, notebook, class diagram, Gemini provider
+
+**Context:** Phase 7 is the submission polish layer — what a grader actually sees first. Also the moment to add a third LLM provider (Gemini) because the user has a Google AI key but not an Anthropic one, and the abstraction was built precisely so this would be a small change.
+**Goal:** Ship a runnable CLI menu, a comprehensive README, an analysis notebook skeleton, an embedded Mermaid class diagram, and a Google Gemini provider alongside the existing Anthropic/OpenAI providers. All without touching agent code.
+**Key design decisions:**
+  1. **CLI is presentation only.** `main.py` injects `sdk: DebateSDK`, `reader: Callable`, `writer: Callable` so the menu is unit-testable with a `_FakeReader`/`_CapturingWriter` pair — no patching `builtins.input`, no string-buffer hacks. 15 tests cover every option including EOF→quit, KeyboardInterrupt→exit-130, and the "open past debate" file picker. File ends at 149 LOC under the 150 cap.
+  2. **Mermaid class diagram lives in PLAN.md, not a separate SVG.** GitHub renders Mermaid natively; an SVG would be a build artifact that drifts. The text-art version stays as §4a so the doc is readable in plain text too.
+  3. **Notebook ships skeleton-only, runs against the latest result on disk.** Cells: verdict summary, total-score bar, dimension stacked-bar, clash-per-round line, cost-breakdown table with LaTeX formula, conclusion (hand-edit after a real run). Each figure also writes `assets/*.png` so the README can embed them without re-running the notebook.
+  4. **Notebooks excluded from ruff.** `notebooks/` is documentation, not source. Ruff was flagging idiomatic notebook patterns (dict comprehensions, zip without strict) that don't belong in a 150-LOC source file but are fine in a one-shot notebook.
+  5. **Gemini provider follows the same shape as Anthropic.** Local import of `google.generativeai`, env-var check at construction, `_format_messages` translates `assistant` → `model` (Gemini's role name), `_normalize` reads `usage_metadata`. No cache-creation tokens (Gemini exposes only `cached_content_token_count`, mapped to `cache_read_tokens`). Cost formula's cache-write term contributes zero — correct, not a bug.
+  6. **Default config flipped to Gemini.** `gemini-2.5-flash` for Dogs/Cats, `gemini-2.5-pro` for the Judge — same tiering pattern as the prior Haiku/Sonnet split. `.env.example` flipped so `GOOGLE_API_KEY` is the required key. `test_config_loads_setup` relaxed from "provider == anthropic" to "provider in {anthropic, google, openai}" — the test was asserting an incidental, not a contract.
+  7. **No agent code changed for the Gemini addition.** The `LLMProvider` ABC + registry seam from Phase 3.3 absorbed the new provider in one new file + one registry import line. The exact payoff the Phase 3.3 ADR predicted.
+**Result:** `main.py` 149 LOC + 15 CLI tests · `google_provider.py` ~75 LOC + 7 tests · full Mermaid class diagram in PLAN.md · 8-cell analysis notebook · full README rewrite. Suite: **187 tests pass**, ruff 0 violations, all code files ≤ 150 LOC.
+**Lesson:** When the abstraction is right, adding a third implementation is a single file and a registry line. Anthropic took weeks of design discussion; OpenAI was a half-day; Gemini was thirty minutes. The cost of building the abstraction in Phase 3 was paid back in full the moment a user said "can I use a different LLM?"
+
+---
+
+## 2026-05-22 — Phase 7.7: Skills restructure (per Lesson 05 §5)
+
+**Context:** The lecturer's spec (Lesson 05 §5) defines a **Skill** as a *directory containing a `skill.md`* with metadata + an optional Python tool layer — not a flat markdown file in a `prompts/` folder. The implementation had been calling them `prompts/<side>_system_prompt.md`, which works functionally but is the wrong vocabulary for a submission graded against Lesson 05.
+**Goal:** Restructure to `skills/<side>/SKILL.md` with proper YAML frontmatter (name, description, side, style, version) and a tiny `load_skill()` helper that strips the frontmatter before handing the body to the LLM. Zero agent-behavior change; the file paths and the labels are what changes.
+**Key design decisions:**
+  1. **`skills/<name>/SKILL.md`, not `.claude/skills/...`.** The latter is Claude Code's in-IDE Skills feature; the lecturer's "Skill" is the conceptual one from Lesson 05 (which would in principle live alongside Python tools in the same directory). Mirroring the conceptual definition keeps the door open for adding `skills/<name>/tool.py` later without another restructure.
+  2. **`load_skill(path)` accepts the directory OR the `SKILL.md` path.** Either works. Agents pass the directory path; the helper appends `SKILL.md` if needed. Reduces the "which one am I supposed to pass" friction.
+  3. **Frontmatter stripped via the same delimiter parser used in RAG ingest.** Same `---` markers, same logic. Could have shared the helper but the two consumers (ingest cares about the metadata dict; skill_loader only wants the body) have slightly different needs — small duplication is cheaper than premature abstraction.
+  4. **`description:` in the frontmatter is intentionally verbose.** Lesson 05 §5 explicitly says: *"Description is critical — the agent uses it to decide when to load."* This isn't auto-loading today (no Router-Skill yet), but the descriptions are written as if a future Router-Skill would read them.
+  5. **Constructor kwarg renamed `prompt_path` → `skill_path`.** Breaking change, but the only callers are the SDK and tests, both updated in the same commit. Vocabulary matters when the grading rubric uses the same terminology.
+**Result:** Three Skills under `skills/`, `skill_loader.py` (~30 LOC), three agents updated, one test renamed, old `prompts/` directory removed. Suite: 187 tests pass, ruff 0 violations.
+**Lesson:** Vocabulary drift is silent until someone reads the rubric. The implementation was correct; the labels were wrong. Worth a sweep against the source spec before submission — every term the rubric uses should appear in the same role in the repo.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)

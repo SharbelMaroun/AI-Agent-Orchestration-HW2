@@ -11,8 +11,9 @@ from typing import Any
 
 from debate.services.agents.base_agent import BaseAgent
 from debate.shared.schemas import Ping, Score, Side, Verdict
+from debate.shared.skill_loader import load_skill
 
-DEFAULT_PROMPT_PATH = Path("prompts/judge_system_prompt.md")
+DEFAULT_SKILL_PATH = Path("skills/judge")
 _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 _CONCESSION_PHRASES = (
     "good point", "fair enough", "i agree", "you're right",
@@ -34,11 +35,11 @@ class JudgeAgent(BaseAgent):
         self,
         *args: Any,
         system_prompt: str | None = None,
-        prompt_path: Path | str = DEFAULT_PROMPT_PATH,
+        skill_path: Path | str = DEFAULT_SKILL_PATH,
         **kwargs: Any,
     ) -> None:
         if system_prompt is None:
-            system_prompt = Path(prompt_path).read_text(encoding="utf-8")
+            system_prompt = load_skill(skill_path)
         kwargs["system_prompt"] = system_prompt
         kwargs.setdefault("agent_id", "judge")
         super().__init__(*args, **kwargs)

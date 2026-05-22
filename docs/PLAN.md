@@ -2,7 +2,13 @@
 
 **Version:** 1.00 · **Status:** Approved (ADRs final; implementation deltas noted inline below) · References: `docs/PRD.md`
 
-> **Implementation deltas vs. this PLAN (as of Phase 6 close):**
+> **Implementation deltas vs. this PLAN (as of Phase 7 close):**
+> - `LLMProvider` registry ships **three** providers, not two: `google` (Gemini, default), `anthropic`, `openai`. `setup.json.models` defaults to `gemini-2.5-flash` (Dogs/Cats) + `gemini-2.5-pro` (Judge).
+> - Per-agent system prompts moved from `prompts/<side>_system_prompt.md` (flat files) to `skills/<side>/SKILL.md` (directories with YAML frontmatter) per Lesson 05 §5. `src/debate/shared/skill_loader.py` parses the new shape.
+> - The terminal-menu CLI (`src/debate/main.py`) is implemented; `DebateSDK` is its sole dependency.
+> - The architecture details below remain accurate; only file paths and provider list changed.
+>
+> **Earlier implementation deltas (Phase 4–6):**
 > - `ApiGatekeeper` is implemented as three sibling modules under `src/debate/shared/` (`gatekeeper.py` — the policy class, `rate_limiter.py` — `RollingWindow`/`ServiceState`/`is_retryable`/exceptions/`QueueStatus`, and `pricing.py` — `compute_cost`/`CostTracker`). The split exists to keep `gatekeeper.py` ≤ 150 LOC per CLAUDE.md §4; the public contract is unchanged.
 > - `Orchestrator` runs synchronously in a single process for Phase 3+. `multiprocessing.Process` spawning, SIGINT/SIGTERM handling, and the heartbeat queue are deferred until the manual-test path (Phase 1) is captured — see PRD_watchdog §9 and TODO §3.9 deferred items.
 > - `RAGStore.add` substitutes `{"_":"_"}` for empty metadata dicts (ChromaDB rejects `{}`). Documented in `PRD_rag.md` §3.1.
@@ -102,7 +108,114 @@ src/debate/
         └── openai_provider.py
 ```
 
-## 4. Class Diagram (text)
+## 4. Class Diagram
+
+```mermaid
+classDiagram
+    class BaseAgent {
+        <<abstract>>
+        +agent_id: str
+        +system_prompt: str
+        +provider: LLMProvider
+        +gatekeeper: GatekeeperLike
+        +history: list~ChatMessage~
+        +generate(user_message) CompletionResponse
+        +receive(envelope)*
+        +heartbeat(out_queue, timestamp)
+        +run(inbox, outbox)
+    }
+    class DebateAgent {
+        <<abstract>>
+        +side: Side
+        +rag: RAGLike
+        +search_tool: SearchLike
+        +handle_your_turn(envelope) Ping
+        #_collect_evidence(query) dict
+        #_parse_ping_json(text, side, round_) Ping
+        #_validate_clash(ping, previous_ping)
+        #_build_search_query(previous_ping)*
+    }
+    class DogsAgent {
+        side = "dogs"
+        +_build_search_query(prev) str
+    }
+    class CatsAgent {
+        side = "cats"
+        +_build_search_query(prev) str
+    }
+    class JudgeAgent {
+        +score_ping(ping) Score
+        +decide_winner(scores, pings) Verdict
+        #_tie_break(dogs, cats, scores) Side
+        #_detect_collusion(recent_pings) bool
+    }
+    class ApiGatekeeper {
+        +execute(api_call, ...) Any
+        +get_queue_status(service) QueueStatus
+        +get_token_summary() dict
+    }
+    class CostTracker {
+        +record(provider, model, ...)
+        +cache_read_pct() float
+        +summary() dict
+    }
+    class Watchdog {
+        +register(id, process, restart_fn)
+        +heartbeat(agent_id)
+        +check_once()
+        +start() / stop()
+        +fatal_agents() list~str~
+    }
+    class RAGStore {
+        +add(documents, metadatas, ids) int
+        +retrieve(query, k) list~Passage~
+        +count() int
+        +clear()
+    }
+    class Embedder {
+        +embed_text(text) list~float~
+        +embed_batch(texts) list~list~float~~
+    }
+    class WebSearch {
+        +search(query, max_results) list~SearchResult~
+    }
+    class Orchestrator {
+        +run_debate(dogs, cats, judge) DebateResult
+    }
+    class DebateSDK {
+        +run_debate(topic) DebateResult
+        +get_last_verdict() Verdict
+        +get_cost_report() dict
+        +list_past_debates() list~Path~
+    }
+    class LLMProvider {
+        <<abstract>>
+        +complete(system, messages, model, max_tokens) CompletionResponse
+    }
+    class AnthropicProvider
+    class OpenAIProvider
+
+    BaseAgent <|-- DebateAgent
+    BaseAgent <|-- JudgeAgent
+    DebateAgent <|-- DogsAgent
+    DebateAgent <|-- CatsAgent
+    LLMProvider <|-- AnthropicProvider
+    LLMProvider <|-- OpenAIProvider
+    BaseAgent ..> ApiGatekeeper : routes via execute()
+    BaseAgent ..> LLMProvider : owns
+    DebateAgent ..> RAGStore : queries
+    DebateAgent ..> WebSearch : queries
+    WebSearch ..> ApiGatekeeper : routes via execute(service="search")
+    RAGStore ..> Embedder : embeds
+    ApiGatekeeper *-- CostTracker : owns
+    Orchestrator ..> DogsAgent
+    Orchestrator ..> CatsAgent
+    Orchestrator ..> JudgeAgent
+    DebateSDK ..> Orchestrator : delegates
+    Watchdog ..> BaseAgent : monitors heartbeats
+```
+
+### 4a. Class Diagram (text fallback)
 
 ```
                        BaseAgent (abstract)
@@ -396,5 +509,7 @@ Single-process layout at Phase 6 close. File sizes are non-blank, non-comment LO
 | `src/debate/shared/logger.py` | ~110 | `FifoRotatingHandler`, `get_logger`, JSONL cost logger |
 | `src/debate/shared/schemas.py` | ~95 | Pydantic message envelopes + Ping/Score/Verdict/DebateResult |
 | `src/debate/shared/config.py` | ~110 | `SetupConfig` / `RateLimitConfig` / `LoggingConfig` + loaders |
-| `src/debate/shared/llm_provider/*.py` | ~80 (total) | `LLMProvider` ABC + Anthropic + OpenAI + registry |
+| `src/debate/shared/llm_provider/*.py` | ~140 (total) | `LLMProvider` ABC + Anthropic + OpenAI + Google (Gemini) + registry |
+| `src/debate/shared/skill_loader.py` | ~30 | Loads `skills/<name>/SKILL.md`, strips YAML frontmatter (Phase 7.7) |
+| `src/debate/main.py` | ~120 | Terminal-menu CLI; presentation only, delegates to `DebateSDK` (Phase 7.1) |
 | `src/debate/shared/constants.py` | ~16 | Side literals, MessageType enum, defaults |

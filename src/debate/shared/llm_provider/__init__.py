@@ -5,7 +5,11 @@ itself in the central registry, so `build_provider("anthropic")` works
 without callers needing to know which module defines which provider.
 """
 
-from debate.shared.llm_provider import anthropic_provider, openai_provider  # noqa: F401
+from debate.shared.llm_provider import (  # noqa: F401
+    anthropic_provider,
+    google_provider,
+    openai_provider,
+)
 from debate.shared.llm_provider.base import (
     LLMProvider,
     build_provider,
