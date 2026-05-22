@@ -151,3 +151,39 @@ def test_orchestrator_cats_sees_dogs_ping_as_previous(tmp_path: Path):
     cats_turn_call = [c for c in cats.receive.call_args_list if isinstance(c.args[0], YourTurn)][0]
     prev = cats_turn_call.args[0].previous_ping
     assert prev is not None and prev.side == "dogs" and prev.round == 1
+
+
+def test_orchestrator_on_event_streams_pings_scores_and_verdict(tmp_path: Path):
+    """The on_event callback fires for every ping, every per-ping score, and
+    the final verdict — in that order, with the correct payloads."""
+    events: list[tuple[str, object]] = []
+    orch = Orchestrator(
+        topic="t",
+        num_rounds=2,
+        results_dir=tmp_path,
+        on_event=lambda kind, payload: events.append((kind, payload)),
+    )
+    orch.run_debate(_mock_agent("dogs"), _mock_agent("cats"), _mock_judge())
+
+    kinds = [k for k, _ in events]
+    # 2 rounds × (1 ping + 1 score per side) = 8 events, then 1 verdict = 9.
+    assert kinds.count("ping") == 4
+    assert kinds.count("score") == 4
+    assert kinds.count("verdict") == 1
+    # Verdict is last.
+    assert kinds[-1] == "verdict"
+    # Each ping is followed by its score for the same side.
+    for i, (k, payload) in enumerate(events[:-1]):
+        if k != "ping":
+            continue
+        nxt_kind, nxt_payload = events[i + 1]
+        assert nxt_kind == "score"
+        assert getattr(payload, "side", None) == getattr(nxt_payload, "side", None)
+
+
+def test_orchestrator_on_event_none_is_noop(tmp_path: Path):
+    """Default behavior (no callback) still produces a complete DebateResult."""
+    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path, on_event=None)
+    result = orch.run_debate(_mock_agent("dogs"), _mock_agent("cats"), _mock_judge())
+    assert isinstance(result, DebateResult)
+    assert len(result.pings) == 2

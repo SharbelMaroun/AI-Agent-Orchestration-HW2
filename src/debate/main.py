@@ -12,7 +12,7 @@ import sys
 from collections.abc import Callable
 
 from debate.sdk.sdk import DebateSDK
-from debate.shared.schemas import DebateResult, Ping, Verdict
+from debate.shared.schemas import DebateResult, Ping, Score, Verdict
 
 BANNER = """\
 ==============================================================
@@ -49,11 +49,37 @@ def _fmt_verdict(v: Verdict) -> str:
 def _fmt_ping(p: Ping) -> str:
     citations = ", ".join(p.citations) if p.citations else "(none)"
     return (
-        f"\n— Round {p.round} · {p.side.upper()} "
-        f"(tokens: {p.tokens_in}/{p.tokens_out}) —\n"
+        f"\n--- Round {p.round} | {p.side.upper()} "
+        f"(tokens in/out: {p.tokens_in}/{p.tokens_out}) ---\n"
         f"{p.text}\n"
-        f"Citations: {citations}\n"
+        f"Citations: {citations}"
     )
+
+
+def _fmt_score(s: Score) -> str:
+    total = s.structure + s.logos + s.pathos + s.ethos + s.clash
+    return (
+        f"  Judge -> {s.side} R{s.ping_round}: "
+        f"struct={s.structure} logos={s.logos} pathos={s.pathos} "
+        f"ethos={s.ethos} clash={s.clash} | total={total}\n"
+        f"  Rationale: {s.rationale}"
+    )
+
+
+def _live_event_printer(writer: Callable[[str], None]) -> Callable[[str, object], None]:
+    """Returns an on_event callback that pretty-prints each debate event as
+    it happens — pings, scores, and the final verdict."""
+
+    def callback(kind: str, payload: object) -> None:
+        if kind == "ping" and isinstance(payload, Ping):
+            writer(_fmt_ping(payload))
+        elif kind == "score" and isinstance(payload, Score):
+            writer(_fmt_score(payload))
+        elif kind == "verdict" and isinstance(payload, Verdict):
+            writer("\n===== VERDICT =====")
+            writer(_fmt_verdict(payload))
+
+    return callback
 
 
 def _print_cost_report(report: dict, writer: Callable[[str], None]) -> None:
@@ -109,13 +135,12 @@ def run_menu(
             writer("Goodbye.")
             return
         if choice == "1":
-            writer("Running debate — this can take a while with real models...")
+            writer("Running debate — pings and judge scores will print live as each round completes...")
             try:
-                result = sdk.run_debate()
+                sdk.run_debate(on_event=_live_event_printer(writer))
             except Exception as exc:  # noqa: BLE001
                 writer(f"Debate failed: {exc}")
                 continue
-            writer(_fmt_verdict(result.verdict))
         elif choice == "2":
             verdict = sdk.get_last_verdict()
             writer(_fmt_verdict(verdict) if verdict else "No verdict yet.")

@@ -76,13 +76,25 @@ def test_quit_exits_immediately() -> None:
 
 
 def test_run_debate_invokes_sdk() -> None:
+    """The CLI passes on_event to sdk.run_debate; live events drive the
+    transcript print-out (verdict included). The mock simulates the orchestrator
+    firing the verdict event."""
     sdk = MagicMock()
-    sdk.run_debate.return_value = _result()
+    result = _result()
+
+    def fake_run(*, on_event, **_kw):
+        if on_event is not None:
+            on_event("verdict", result.verdict)
+        return result
+
+    sdk.run_debate.side_effect = fake_run
     reader = _FakeReader(["1", "q"])
     writer = _CapturingWriter()
     run_menu(sdk=sdk, reader=reader, writer=writer)
     sdk.run_debate.assert_called_once()
+    # on_event was passed and the verdict text reached the writer.
     assert "Winner: DOGS" in writer.all
+    assert "on_event" in sdk.run_debate.call_args.kwargs
 
 
 def test_view_last_verdict_when_present() -> None:
