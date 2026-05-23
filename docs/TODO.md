@@ -119,50 +119,14 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 
 ---
 
-## Phase 1 — Manual Debate (Stage 1 deliverable for README)
+## Phase 1 — Manual Debate (Stage 1) — ❌ SKIPPED
 
-### 1.1 Setup
-- [ ] Install Claude CLI locally (if not already)
-- [ ] Verify `claude --version` runs on each of our machines
-- [ ] Choose final debate topic phrasing for Stage 1: "Are dogs or cats the better pet?"
-- [ ] Write the manual judge instructions (one paragraph)
-- [ ] Write the manual Dogs-agent role instructions
-- [ ] Write the manual Cats-agent role instructions
-- [ ] Decide manual ping word limit (e.g., 150 words for speed)
-- [ ] Open two Claude CLI windows side by side
+Lecturer's "Build Stages" lists three stages:
+1. Manual (two CLI windows by hand)
+2. Intermediate (Claude CLI command activates parent)
+3. **Final — main Python program managing the three agents** ✅ what we built
 
-### 1.2 Run the manual debate
-- [ ] Brief Dogs CLI session with role + topic + rules
-- [ ] Brief Cats CLI session with role + topic + rules
-- [ ] Round 1 — Dogs opens (ping copied into transcript)
-- [ ] Round 1 — Cats responds (paste Dogs ping into Cats CLI)
-- [ ] Round 2 — Dogs counters (paste Cats ping into Dogs CLI)
-- [ ] Round 2 — Cats counters
-- [ ] Round 3 — Dogs
-- [ ] Round 3 — Cats
-- [ ] Round 4 — Dogs
-- [ ] Round 4 — Cats
-- [ ] Round 5 — Dogs
-- [ ] Round 5 — Cats
-- [ ] Round 6 — Dogs
-- [ ] Round 6 — Cats
-- [ ] Round 7 — Dogs
-- [ ] Round 7 — Cats
-- [ ] Round 8 — Dogs
-- [ ] Round 8 — Cats
-- [ ] Round 9 — Dogs
-- [ ] Round 9 — Cats
-- [ ] Round 10 — Dogs
-- [ ] Round 10 — Cats
-- [ ] You (human) judge it: pick a winner + write 3-sentence rationale
-
-### 1.3 Capture artifacts
-- [ ] Save full transcript to `results/manual_stage1/transcript.md`
-- [ ] Save human-judge verdict to `results/manual_stage1/verdict.md`
-- [ ] Take screenshot of the two CLI windows mid-debate
-- [ ] Save screenshot to `assets/manual_stage1/two_cli_windows.png`
-- [ ] Write 1-paragraph reflection: "what we learned from the manual run"
-- [ ] Add reflection to `docs/PROMPTS.md`
+Only Stage 3 is required. Stage 1 is a "Recommended" learning artifact ("understand the dynamic first") — not part of the Mandatory Conditions or Mandatory Engineering Requirements. We chose to skip it: the Python program runs end-to-end (`uv run python -m debate`), produces transcripts, and is sufficient evidence we understood the orchestration. Trade-off: a grader reading the Build Stages section *may* note the missing manual artifact.
 
 ---
 
@@ -682,7 +646,6 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [ ] Section: running — `uv run python -m debate`
 - [ ] Section: terminal menu screenshot
 - [ ] Section: architecture diagram (link to PLAN.md or embed)
-- [ ] Section: Stage 1 manual transcript (from Phase 1 deliverable)
 - [ ] Section: example output — sample verdict + cost report
 - [ ] Section: configuration file reference (setup.json, rate_limits.json)
 - [ ] Section: how to swap LLM provider

@@ -371,7 +371,6 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 **Honest deferrals** (documented inline so a grader sees the rationale):
 - Screenshots (terminal_menu.png, mid_debate.png, verdict.png, cost_report.png) — can only be captured by a human at a real terminal. `result_example.png` was added separately.
-- Manual Phase-1 two-CLI debate transcript — assignment-defined partner deliverable.
 - Multiprocessing orchestrator (3 child processes) — sync orchestrator is testable and works; PRD/PLAN document the deferral with rationale; cost/benefit doesn't justify the refactor for this submission scale.
 - Per-screen workflow diagrams + accessibility notes — terminal UI is a 6-option menu; the menu mockup in README already covers it.
 - Cost "forecasting" — already have WARNING at 80% and `BudgetExceededError` at 100%; forecast would mean predicting future spend, over-engineering for one debate at a time.

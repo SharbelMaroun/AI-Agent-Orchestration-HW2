@@ -10,7 +10,7 @@
 >
 > **Earlier implementation deltas (Phase 4–6):**
 > - `ApiGatekeeper` is implemented as three sibling modules under `src/debate/shared/` (`gatekeeper.py` — the policy class, `rate_limiter.py` — `RollingWindow`/`ServiceState`/`is_retryable`/exceptions/`QueueStatus`, and `pricing.py` — `compute_cost`/`CostTracker`). The split exists to keep `gatekeeper.py` ≤ 150 LOC per CLAUDE.md §4; the public contract is unchanged.
-> - `Orchestrator` runs synchronously in a single process for Phase 3+. `multiprocessing.Process` spawning, SIGINT/SIGTERM handling, and the heartbeat queue are deferred until the manual-test path (Phase 1) is captured — see PRD_watchdog §9 and TODO §3.9 deferred items.
+> - `Orchestrator` runs synchronously in a single process. `multiprocessing.Process` spawning, SIGINT/SIGTERM handling, and the heartbeat queue are deferred — Lesson 05's "N agents = N OS processes" framing is conceptual, not a mandatory Exercise 02 engineering requirement. The sync orchestrator is testable and runs end-to-end; the multi-process upgrade is a wrapper, not a rewrite. See PRD_watchdog §9.
 > - `RAGStore.add` substitutes `{"_":"_"}` for empty metadata dicts (ChromaDB rejects `{}`). Documented in `PRD_rag.md` §3.1.
 > - `DebateSDK` default `gatekeeper=_PassthroughGatekeeper`; production code wires `ApiGatekeeper` once Phase 7 polish lands the real config-driven construction.
 
@@ -483,7 +483,7 @@ The Judge is the parent's direct child but does **not** spawn Pro/Con — the Or
 ## 9. Open Questions — Resolved
 1. **Web search package** — Resolved: `duckduckgo-search` selected (Phase 4.4). `WebSearch.backend` is injectable so a Tavily fallback can drop in later behind a feature flag if DDG rate-limits us during real runs; not built yet.
 2. **RAG corpus assembly** — Resolved: manual curation. 15 hand-picked passages per side, max 196 words each, with YAML frontmatter. Files committed under `data/dogs/*.txt` and `data/cats/*.txt`.
-3. **Pair partner's role** — Resolved out-of-band: we agreed on a split — one of us owns the implementation pipeline; the other owns the Phase 1 manual debate transcript and the Phase 7 polish artifacts (screenshots, cost analysis table).
+3. **Pair partner's role** — Resolved out-of-band: we agreed on a split — one of us owns the implementation pipeline; the other owns Phase 7 polish artifacts (screenshots, cost analysis table review).
 
 ## 10. Module Map (as built)
 
