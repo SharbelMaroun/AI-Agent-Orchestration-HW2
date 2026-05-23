@@ -115,8 +115,14 @@ def _open_past_debate(sdk: DebateSDK, writer: Callable[[str], None]) -> None:
     payload = json.loads(target.read_text(encoding="utf-8"))
     result = DebateResult.model_validate(payload)
     writer(f"\nTopic: {result.topic}")
+    # Match the live-stream layout: each ping immediately followed by the
+    # judge's per-dimension score for that same (round, side).
+    scores_by_key = {(s.ping_round, s.side): s for s in result.scores}
     for ping in result.pings:
         writer(_fmt_ping(ping))
+        score = scores_by_key.get((ping.round, ping.side))
+        if score is not None:
+            writer(_fmt_score(score))
     writer(_fmt_verdict(result.verdict))
 
 

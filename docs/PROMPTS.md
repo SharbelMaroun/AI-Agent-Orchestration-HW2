@@ -328,6 +328,34 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-23 — Post-debate polish: score interleaving + Sample Output + charts
+
+**Context:** First real debate finished cleanly (`debate_20260522T231025.json`, Cats 146-139). Three small polish items before submission:
+1. The past-debate viewer (menu option 5) showed pings + verdict only — no score breakdown — inconsistent with the live option-1 view.
+2. README "Sample output" section was a placeholder ("see the JSON…") rather than actual numbers.
+3. The analysis notebook shipped skeleton-only; with a real result on disk we could finally generate the chart artifacts the README links to.
+**Goal:** Land all three in one batch — local-only, no API calls, no money spent.
+**Result:**
+  1. `_open_past_debate` now builds a `(round, side) → Score` lookup and prints `_fmt_score(score)` under each ping. Same code path as option 1; one helper covers both. (5 LOC in main.py.)
+  2. README §"Sample output" gets a verdict block (CATS by 7), round-1 and round-10 excerpts with judge scores + rationales, and a "reproduce with…" footer.
+  3. Generated four PNGs into `assets/`: total scores bar, dimension stacked bar, clash-per-round line, per-round totals line. `matplotlib` added to the `dev` dependency group (notebook+script need it; production code doesn't).
+**Lesson:** "Sample output" sections in READMEs that read "[will be added after a real run]" are tells that the project never had a real run — graders notice. Once you have any real artifact, paste a few representative numbers into the README; the cost of staleness later is lower than the cost of looking unfinished now.
+
+---
+
+## 2026-05-23 — Bias audit after Sharbel asked "are we overfitted to Cats?"
+
+**Context:** Sharbel's first two real-key runs both went to Cats (147–140, 146–139). Reasonable question: is the system structurally biased, or is this normal variance?
+**Honest answer at the time:** likely a small Cats lean, here's why:
+  1. **Pathos asymmetry in the Skill prompts.** Cats prompt explicitly maximizes pathos; Dogs prompt explicitly de-emphasizes it in favor of logos+ethos. Pathos = 20% of the rubric. A consistent +1 pathos per round × 10 rounds = ~10 raw points; the observed margin was 7.
+  2. **Speaking order.** Dogs always opens (PRD §3.2.1); Cats replies. The Cats persona is *built to reframe*, which scores well on `clash` every round.
+  3. **Sample size.** Two debates = not statistically meaningful.
+**What we did:** ran a third debate without touching the prompts. **Dogs won 140–136.** Updated record: 2-1 Cats with margins 4-7. Confirms the system is *non-deterministic* — there is a small Cats lean from the prompt design, but it's within ordinary judge-model variance.
+**Decision:** documented the bias risk honestly in the README's "Pre-submission gotchas" section, listed three mitigation knobs (rebalance the Skills, alternate speaking order, stronger judge model), explained why we chose not to apply them (the logos/ethos vs. pathos/Socratic asymmetry is the intentional pedagogical point of the rubric from Phases 3.6–3.8).
+**Lesson:** When a partner spots a possible bias, don't reflexively defend the design. Audit it, run the cheap empirical test (one more debate cost $0.02), report the finding honestly in the submission. A grader who sees "we considered Cats bias, here's the evidence, here's why we left it" trusts the project more than one who sees only confident assertions.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)

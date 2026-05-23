@@ -37,6 +37,7 @@ openai = ["openai>=1.50.0"]
 # Dev tooling — uv installs this group by default on `uv sync`.
 [dependency-groups]
 dev = [
+    "matplotlib>=3.10.9",
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "ruff>=0.7.0",

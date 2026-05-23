@@ -740,6 +740,9 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] **Model upgrade:** default Gemini bumped from `gemini-2.5-flash-lite` to `gemini-3.1-flash-lite` (same pricing tier, newer model family — verified against the partner's other production app)
 - [x] **Provider switch:** default flipped from Gemini to OpenAI `gpt-4o-mini` for all three agents — Gemini free-tier 20 RPD cap was blocking a full 10-round debate; OpenAI has no daily-call cap, ~$0.02 per full debate at list price. `uv sync --extra openai` installs the SDK.
 - [x] **Live event stream from menu option 1:** Orchestrator accepts `on_event: Callable[[str, Any], None]` and fires `("ping", Ping)`, `("score", Score)`, `("verdict", Verdict)` events in order. SDK passes the callback through; CLI installs a live printer so the user sees every agent response and every judge score as the debate progresses, not just the final verdict. New tests: `test_orchestrator_on_event_streams_pings_scores_and_verdict`, `test_orchestrator_on_event_none_is_noop`. Suite at 190.
+- [x] **Menu option 5 now interleaves scores:** when reopening a saved `DebateResult` JSON, the per-round judge score block prints under each ping (matches the live option-1 layout).
+- [x] **README Sample Output populated** with real verdict + excerpts from `results/debates/debate_20260522T231025.json` (Cats won 146-139).
+- [x] **Score charts generated** from the real run and committed under `assets/` (total_scores, score_breakdown, clash_per_round, per_round_totals). `matplotlib` added to the dev dependency group.
 - [x] `uv run pytest --cov` passes ≥ 85% (96.08% on Phase 8 sweep, 187 tests)
 - [x] `uv run ruff check .` passes 0 errors
 - [x] `uv run ruff format --check .` clean (after `ruff format .` applied in Phase 8 sweep)
