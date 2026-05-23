@@ -41,7 +41,6 @@ The Judge moderates all communication (no direct Dogs ↔ Cats). Every ping is J
 | Phase | Description | Status |
 |---|---|---|
 | 0 | Documentation & design | ✅ Complete |
-| 1 | Manual debate (Stage 1 transcript) | ⬜ Partner-runnable — produces the `results/manual_stage1/` artifacts |
 | 2 | Project bootstrap | ✅ Complete |
 | 3 | Core code (schemas, providers, agents, orchestrator, SDK) | ✅ Complete |
 | 4 | Engineering (gatekeeper, watchdog, logger, search) | ✅ Complete |
@@ -53,7 +52,7 @@ The Judge moderates all communication (no direct Dogs ↔ Cats). Every ping is J
 See `docs/TODO.md` for the full ~600-task breakdown.
 
 **Deferred items** (each justified inline in `docs/TODO.md`):
-- Orchestrator runs synchronously in one process; `multiprocessing.Process` spawning + SIGINT/SIGTERM clean shutdown land when the manual-debate Phase 1 transcript pins the exact concurrency expectations.
+- Orchestrator runs synchronously in one process; `multiprocessing.Process` spawning + SIGINT/SIGTERM clean shutdown deferred — Exercise 02 mandatory engineering list does not require multi-process IPC, and the sync orchestrator is testable and works end-to-end. See `docs/PLAN.md` Implementation Deltas.
 - Gatekeeper sanitize hook (PRD_gatekeeper §9) — not built; no incident class to defend against yet.
 - Tavily web-search fallback — not built; `WebSearch.backend` is injectable so it drops in cleanly when needed.
 
@@ -351,10 +350,6 @@ The full 20-ping + 20-score transcript and the cost report are in `results/debat
 
 Regenerate with `uv run jupyter notebook notebooks/analysis.ipynb` and "Run All", or by running the same code path directly.
 
-### Phase 1 manual debate
-
-Stage 1 manual debate transcript (Phase 1 partner deliverable): see `results/manual_stage1/` once we run the two-CLI session.
-
 ---
 
 ## Project layout
@@ -406,7 +401,6 @@ Every notable issue from the build — what broke, why, and the fix. Listed roug
 ### Pre-submission gotchas still to handle (partner-runnable)
 
 - **Free-tier rate limits.** If you stay on Gemini, enable billing — 10-round debates need >20 calls per model.
-- **Manual Phase 1 transcript.** Two-CLI hand-driven debate; deliverable for the rubric.
 - **Screenshots.** Partner needs to drop PNGs in `assets/` (terminal menu, mid-debate stream, verdict, cost report).
 
 ### A note on potential Cats bias — and what we found
@@ -478,8 +472,7 @@ gantt
     section Submission
     Phase 8.1+8.2 — hygiene sweep   :done, p8, after p7, 30m
     Real-key smoke + bug fixes      :active, smoke, after p8, 1h
-    Phase 1 — manual debate         :crit, p1, after smoke, 1h30m
-    Phase 8 — Moodle upload         :crit, sub, after p1, 30m
+    Phase 8 — Moodle upload         :crit, sub, after smoke, 30m
 ```
 
 ---
