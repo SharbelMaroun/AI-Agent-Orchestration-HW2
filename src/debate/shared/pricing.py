@@ -88,3 +88,19 @@ class CostTracker:
             "by_model": {k: dict(v) for k, v in self.by_model.items()},
             "cache_read_pct": self.cache_read_pct(),
         }
+
+
+def cost_report_from_pings(pings, models: dict, pricing: dict) -> dict:
+    """Build a `cost_report` dict (same shape as `CostTracker.summary()`) from
+    per-ping token counts. Used by the orchestrator when no gatekeeper-level
+    cost tracking is wired in (default SDK uses passthrough). Skips pings
+    whose side isn't in `models` or whose model isn't priced."""
+    tracker = CostTracker()
+    for ping in pings:
+        model_ref = models.get(ping.side)
+        if model_ref is None:
+            continue
+        provider, name = model_ref.provider, model_ref.name
+        cost = compute_cost(provider, name, pricing, ping.tokens_in, ping.tokens_out)
+        tracker.record(provider, name, ping.tokens_in, ping.tokens_out, 0, 0, cost)
+    return tracker.summary()

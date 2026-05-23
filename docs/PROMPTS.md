@@ -382,6 +382,44 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
+## 2026-05-23 — Judge announcement + coin-flip opener + orchestrator test split
+
+**Context:** Partner asked: stop forcing Dogs to always open, and have the Judge announce the rules and the coin flip aloud. PRD §3.2.1 hardcoded "Dogs always opens" — needed to supersede.
+**Goal:** Per-debate coin flip (1 → Dogs opens, 0 → Cats opens) + templated Judge announcement event fired before round 1, so the live event stream shows the rules and opener choice. No agent code touched.
+**Key design decisions:**
+  1. **Coin flip as `Callable[[], int]`** injected into `Orchestrator(..., coin_flip=...)`. Default `random.randint(0, 1)`; tests pass `lambda: 1` or `lambda: 0`. Same seam pattern as the gatekeeper's `sleep_fn` and the watchdog's `clock` — every non-deterministic dependency is replaceable.
+  2. **Announcement is templated, not LLM-generated.** Adding another paid API call for "Judge, welcome both sides and announce the flip" would buy nothing — the content doesn't vary meaningfully and a flaky LLM could omit the coin-flip result. The orchestrator owns the template and labels the output as from the Judge.
+  3. **`_run_round` parametrized as `(first, second)`** instead of `(dogs, cats)`. The two sides alternate either Dogs→Cats→… or Cats→Dogs→… — loop structure identical, just the binding swap before round 1.
+  4. **SDK `run_debate(coin_flip=...)` passthrough** so integration tests can pin the opener without monkey-patching `random`.
+  5. **CLI live printer** gets one new branch: `announcement` events render inside a `===== JUDGE ANNOUNCEMENT =====` banner.
+  6. **Three-file test split** (post-additions) — `test_orchestrator.py` was at 178 LOC after the new coin-flip tests. Pulled the coin-flip + announcement tests into `test_orchestrator_opener.py` and the `on_event` streaming tests into `test_orchestrator_events.py`; both share fixtures from a new `_orchestrator_fixtures.py` (filename starts with `_` so pytest skips it). All three under 150.
+
+**Result:** Suite at 194 passing, ruff check + format both clean, every src/tests file ≤ 150 strict LOC. PRD §3.2.1 invariant superseded.
+
+**Lesson:** When a partner spots a fairness concern about a design choice, "make it configurable + observable" beats "argue the design is fine." Coin flip + announcement together do both — the configurability removes the bias, the announcement makes the choice visible to the user in real time.
+
+---
+
+## 2026-05-23 — Menu UX fix: merge "list" + "open" into one option
+
+**Context:** During testing the partner pressed option 4 expecting to see a numbered list of past debates AND be able to pick one to open. The old design had option 4 = "just list filenames" and option 5 = "list + pick one to open" — an artificial split that confused users.
+**Goal:** One option to list AND select.
+**What changed:** Menu text reduced to 4 options. Option 4 now lists numbered debates and prompts for a selection (blank cancels back to menu). Option "5" kept as a silent alias inside the dispatcher so previously-documented workflows still work without a deprecation warning.
+**Test contract:** `test_list_past_debates_some` updated to monkeypatch `builtins.input` with `""` so the inner selection prompt receives a cancel.
+**Lesson:** When a user reaches for a feature and gets the wrong affordance, the bug is in the menu design, not in the user. Single-stage flows beat two-stage flows for terminal UI.
+
+---
+
+## 2026-05-23 — Cost-report bug + cross-debate analysis
+
+**Context:** Partner pressed menu option 3 after a successful debate run and got "No cost data available." Also asked for a richer analysis across all the debates we've now accumulated (6 of them after a few more test runs).
+**Cost-report bug:** the orchestrator literally wrote `cost_report={}` in every `DebateResult`. The agents DO route LLM calls through the gatekeeper, but the SDK's default `_PassthroughGatekeeper` doesn't track costs, and even with a real gatekeeper we never copied its summary into the result. Fix: `_build_cost_report()` reads per-ping token counts (which we always have) plus `setup.pricing` (passed in from the SDK) and produces a real `{total_usd, by_model, cache_read_pct}` dict. Agent-side only — judge calls aren't visible in pings — but that's the lower bound and matches what the cost report needs to show.
+**Cross-debate analysis** (`scripts/cross_debate_analysis.py`): walks every `results/debates/debate_*.json`, computes win record, margin distribution, per-dimension averages per side, radar of persona footprint, cumulative score evolution overlaid across debates, token+cost economy, citation density. Writes 7 PNGs into `assets/` for the README.
+**Headline finding:** the win record is 3-3 across 6 real debates. The +1.00 pathos gap and the −0.45 logos / −0.55 ethos gaps in Cats's favour / Dogs's favour exactly match what the Skill prompts ask for — the personas leak through the rubric scores as designed, but the two effects nearly cancel on totals (margins 2–20 out of ~150). The earlier "are we biased toward Cats?" worry was variance, not bias.
+**Lesson:** When a non-obvious bug ("why is the cost always zero?") has a fix path that requires the user to inspect data, ALSO build the data-visualisation around it. Same fix, double the value: bug closed AND the report just got six new charts.
+
+---
+
 ## TODO: Prompts to log as we build them
 
 - [ ] Dogs agent system prompt (logos/ethos persona)
