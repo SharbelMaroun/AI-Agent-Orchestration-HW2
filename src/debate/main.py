@@ -24,8 +24,7 @@ MENU = """\
   [1] Run a new debate
   [2] View last verdict
   [3] View cost report
-  [4] List past debates
-  [5] Open a past debate transcript
+  [4] List past debates (pick one to open its transcript)
   [Q] Quit
 """
 
@@ -71,7 +70,11 @@ def _live_event_printer(writer: Callable[[str], None]) -> Callable[[str, object]
     it happens — pings, scores, and the final verdict."""
 
     def callback(kind: str, payload: object) -> None:
-        if kind == "ping" and isinstance(payload, Ping):
+        if kind == "announcement" and isinstance(payload, str):
+            writer("\n===== JUDGE ANNOUNCEMENT =====")
+            writer(payload)
+            writer("==============================")
+        elif kind == "ping" and isinstance(payload, Ping):
             writer(_fmt_ping(payload))
         elif kind == "score" and isinstance(payload, Score):
             writer(_fmt_score(payload))
@@ -154,14 +157,7 @@ def run_menu(
             writer(_fmt_verdict(verdict) if verdict else "No verdict yet.")
         elif choice == "3":
             _print_cost_report(sdk.get_cost_report(), writer)
-        elif choice == "4":
-            debates = sdk.list_past_debates()
-            if not debates:
-                writer("No past debates found.")
-            else:
-                for path in debates:
-                    writer(f"  {path.name}")
-        elif choice == "5":
+        elif choice in ("4", "5"):  # "5" kept as alias for the old menu
             _open_past_debate(sdk, writer)
         else:
             writer(f"Unknown option: {choice!r}")

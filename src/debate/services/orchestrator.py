@@ -1,20 +1,20 @@
 """Orchestrator — drives the debate loop. See docs/PRD.md §3.2.
 
-For now the loop runs the three agents synchronously by calling
-`agent.receive(envelope)` directly (each agent's `receive` is already
-designed to be a one-shot dispatch). The same agent instances can later be
-hosted in `multiprocessing.Process`es with a thin queue adapter — the
-agent contract (a `receive(envelope)` that returns the next envelope) does
-not change. Keeping the loop synchronous here makes the orchestrator
-trivially testable and the file fits under the 150-LOC cap.
+Runs three agents synchronously by calling `agent.receive(envelope)`
+directly. The same agents can later be hosted in `multiprocessing.Process`es
+with a thin queue adapter — the agent contract is unchanged. ADR note:
+deliberate Phase 3.9 trade-off documented in `docs/PROMPTS.md`.
 
-ADR note: this is the deliberate Phase 3.9 trade-off documented in
-docs/PROMPTS.md — synchronous orchestration first, process isolation if
-and when the watchdog phase needs it.
+The opener of round 1 is decided by a coin flip (`1 → dogs`, `0 → cats`)
+via the injected `coin_flip` callable; tests pass a deterministic flip.
+Before round 1, the orchestrator emits an `announcement` event labelled
+as coming from the Judge (templated, no extra LLM call) so the user sees
+the rules + opener choice in the live event stream.
 """
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,11 +26,13 @@ from debate.shared.schemas import (
     OpeningBrief,
     Ping,
     Score,
+    Side,
     Verdict,
     YourTurn,
 )
 
-OnEvent = Callable[[str, Any], None]  # (kind, payload) — kind in {"ping","score","verdict"}
+OnEvent = Callable[[str, Any], None]  # kind in {announcement, ping, score, verdict}
+CoinFlip = Callable[[], int]  # returns 0 (cats opens) or 1 (dogs opens)
 
 
 class Orchestrator:
@@ -43,12 +45,18 @@ class Orchestrator:
         rules: str = "≤250 words per ping, JSON-only replies, clash required from round 2.",
         results_dir: Path | str = "results/debates",
         on_event: OnEvent | None = None,
+        coin_flip: CoinFlip = lambda: random.randint(0, 1),
+        models: dict | None = None,
+        pricing: dict | None = None,
     ) -> None:
         self.topic = topic
         self.num_rounds = num_rounds
         self.rules = rules
         self.results_dir = Path(results_dir)
         self.on_event = on_event
+        self.coin_flip = coin_flip
+        self.models = models or {}
+        self.pricing = pricing or {}
         self.pings: list[Ping] = []
 
     def _emit(self, kind: str, payload: Any) -> None:
@@ -58,11 +66,16 @@ class Orchestrator:
     def run_debate(self, dogs: Any, cats: Any, judge: JudgeAgent) -> DebateResult:
         started_at = datetime.now(timezone.utc)
         self._broadcast_opening_brief(dogs, cats, judge)
+        opener: Side = "dogs" if self.coin_flip() == 1 else "cats"
+        self._emit("announcement", self._announcement_text(opener))
+        first, second = (dogs, cats) if opener == "dogs" else (cats, dogs)
         previous_ping: Ping | None = None
         for round_num in range(1, self.num_rounds + 1):
-            dogs_ping, cats_ping = self._run_round(dogs, cats, judge, round_num, previous_ping)
-            self.pings.extend([dogs_ping, cats_ping])
-            previous_ping = cats_ping
+            first_ping, second_ping = self._run_round(
+                first, second, judge, round_num, previous_ping
+            )
+            self.pings.extend([first_ping, second_ping])
+            previous_ping = second_ping
         verdict = self._collect_verdict(judge)
         finished_at = datetime.now(timezone.utc)
         result = DebateResult(
@@ -70,7 +83,7 @@ class Orchestrator:
             pings=self.pings,
             scores=list(judge.scores),
             verdict=verdict,
-            cost_report={},
+            cost_report=self._build_cost_report(),
             started_at=started_at,
             finished_at=finished_at,
         )
@@ -84,29 +97,29 @@ class Orchestrator:
 
     def _run_round(
         self,
-        dogs: Any,
-        cats: Any,
+        first: Any,
+        second: Any,
         judge: JudgeAgent,
         round_num: int,
         previous_ping: Ping | None,
     ) -> tuple[Ping, Ping]:
-        """Dogs opens; Cats responds. Judge scores each ping immediately."""
-        dogs_ping = dogs.receive(YourTurn(round=round_num, previous_ping=previous_ping))
-        if not isinstance(dogs_ping, Ping):
-            raise RuntimeError(f"Dogs agent did not return a Ping in round {round_num}")
-        self._emit("ping", dogs_ping)
-        dogs_score = judge.receive(dogs_ping)
-        if isinstance(dogs_score, Score):
-            self._emit("score", dogs_score)
+        """`first` opens; `second` responds. Judge scores each ping immediately."""
+        first_ping = first.receive(YourTurn(round=round_num, previous_ping=previous_ping))
+        if not isinstance(first_ping, Ping):
+            raise RuntimeError(f"First agent did not return a Ping in round {round_num}")
+        self._emit("ping", first_ping)
+        first_score = judge.receive(first_ping)
+        if isinstance(first_score, Score):
+            self._emit("score", first_score)
 
-        cats_ping = cats.receive(YourTurn(round=round_num, previous_ping=dogs_ping))
-        if not isinstance(cats_ping, Ping):
-            raise RuntimeError(f"Cats agent did not return a Ping in round {round_num}")
-        self._emit("ping", cats_ping)
-        cats_score = judge.receive(cats_ping)
-        if isinstance(cats_score, Score):
-            self._emit("score", cats_score)
-        return dogs_ping, cats_ping
+        second_ping = second.receive(YourTurn(round=round_num, previous_ping=first_ping))
+        if not isinstance(second_ping, Ping):
+            raise RuntimeError(f"Second agent did not return a Ping in round {round_num}")
+        self._emit("ping", second_ping)
+        second_score = judge.receive(second_ping)
+        if isinstance(second_score, Score):
+            self._emit("score", second_score)
+        return first_ping, second_ping
 
     def _collect_verdict(self, judge: JudgeAgent) -> Verdict:
         verdict = judge.receive(FinalizeRequest(pings=self.pings))
@@ -130,6 +143,20 @@ class Orchestrator:
             side=side,
             rubric=rubric,
         )
+
+    def _announcement_text(self, opener: Side) -> str:
+        return (
+            f'Judge: Welcome to the debate. Topic: "{self.topic}". '
+            f"Rules: {self.rules} The debate runs for {self.num_rounds} round(s). "
+            f"Coin flip result: {opener.upper()} will open."
+        )
+
+    def _build_cost_report(self) -> dict:
+        """Delegates to `pricing.cost_report_from_pings` — lives in pricing.py
+        so the math is reusable and orchestrator.py stays under the LOC cap."""
+        from debate.shared.pricing import cost_report_from_pings
+
+        return cost_report_from_pings(self.pings, self.models, self.pricing)
 
     @staticmethod
     def _rubric_blurb() -> str:

@@ -58,6 +58,7 @@ class DebateSDK:
         self,
         topic: str | None = None,
         on_event: Callable[[str, Any], None] | None = None,
+        coin_flip: Callable[[], int] | None = None,
     ) -> DebateResult:
         cfg = self.setup
         dogs = DogsAgent(
@@ -75,12 +76,17 @@ class DebateSDK:
             gatekeeper=self.gatekeeper,
             model_name=cfg.models["judge"].name,
         )
-        orch = Orchestrator(
-            topic=topic or cfg.topic,
-            num_rounds=cfg.num_rounds,
-            results_dir=self.results_dir,
-            on_event=on_event,
-        )
+        orch_kwargs: dict[str, Any] = {
+            "topic": topic or cfg.topic,
+            "num_rounds": cfg.num_rounds,
+            "results_dir": self.results_dir,
+            "on_event": on_event,
+            "models": cfg.models,
+            "pricing": cfg.pricing,
+        }
+        if coin_flip is not None:
+            orch_kwargs["coin_flip"] = coin_flip
+        orch = Orchestrator(**orch_kwargs)
         self._last_result = orch.run_debate(dogs, cats, judge)
         return self._last_result
 

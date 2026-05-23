@@ -1,189 +1,83 @@
-"""Orchestrator tests (Phase 3.9)."""
+"""Orchestrator core tests: round loop, briefing, persistence, error paths.
+
+Event-streaming tests live in `test_orchestrator_events.py`. Coin-flip +
+announcement tests live in `test_orchestrator_opener.py`. All three files
+share fixtures from `_orchestrator_fixtures.py`. Split for the 150-LOC
+test cap (CLAUDE.md §6)."""
 
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from debate.services.orchestrator import Orchestrator
-from debate.shared.schemas import (
-    DebateResult,
-    OpeningBrief,
-    Ping,
-    Score,
-    Verdict,
-    YourTurn,
-)
-
-NOW = datetime(2026, 5, 22, tzinfo=timezone.utc)
+from debate.shared.schemas import DebateResult, OpeningBrief, Ping, Score, Verdict, YourTurn
+from tests.unit._orchestrator_fixtures import mock_agent, mock_judge
 
 
-def _ping(side: str, round_: int) -> Ping:
-    return Ping(
-        round=round_,
-        side=side,
-        text=f"{side} round {round_}",
-        timestamp=NOW,
-        refers_to_ping=(round_ - 1 if side == "cats" or round_ > 1 else None),
-    )
-
-
-def _mock_agent(side: str):
-    """Agent that emits a deterministic Ping for whatever YourTurn it's given."""
-    agent = MagicMock()
-
-    def receive(env):
-        if isinstance(env, OpeningBrief):
-            return None
-        if isinstance(env, YourTurn):
-            return _ping(side, env.round)
-        return None
-
-    agent.receive.side_effect = receive
-    return agent
-
-
-def _mock_judge():
-    judge = MagicMock()
-    judge.scores = []
-
-    def receive(env):
-        if isinstance(env, OpeningBrief):
-            return None
-        if isinstance(env, Ping):
-            score = Score(
-                ping_round=env.round,
-                side=env.side,
-                structure=2,
-                logos=2,
-                pathos=2,
-                ethos=2,
-                clash=2,
-                rationale="ok",
-            )
-            judge.scores.append(score)
-            return score
-        # FinalizeRequest
-        return Verdict(
-            winner="dogs",
-            dogs_total=20,
-            cats_total=18,
-            margin=2,
-            written_rationale="dogs edged it",
-            key_points_dogs=["loyalty"],
-            key_points_cats=["independence"],
-        )
-
-    judge.receive.side_effect = receive
-    return judge
-
-
-def test_orchestrator_run_debate_smoke(tmp_path: Path):
-    orch = Orchestrator(topic="t", num_rounds=2, results_dir=tmp_path)
-    result = orch.run_debate(_mock_agent("dogs"), _mock_agent("cats"), _mock_judge())
+def test_run_debate_smoke(tmp_path: Path):
+    orch = Orchestrator(topic="t", num_rounds=2, results_dir=tmp_path, coin_flip=lambda: 1)
+    result = orch.run_debate(mock_agent("dogs"), mock_agent("cats"), mock_judge())
     assert isinstance(result, DebateResult)
     assert result.verdict.winner == "dogs"
-    assert len(result.pings) == 4  # 2 rounds × 2 sides
+    assert len(result.pings) == 4
     assert len(result.scores) == 4
 
 
-def test_orchestrator_dogs_opens_round_1(tmp_path: Path):
-    """Per PRD §3.2.1 Dogs always produces the first ping of round 1."""
-    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path)
-    dogs, cats, judge = _mock_agent("dogs"), _mock_agent("cats"), _mock_judge()
-    orch.run_debate(dogs, cats, judge)
-    # First non-brief call to dogs must be YourTurn(round=1, previous_ping=None)
-    your_turn_calls = [c for c in dogs.receive.call_args_list if isinstance(c.args[0], YourTurn)]
-    first = your_turn_calls[0].args[0]
-    assert first.round == 1
-    assert first.previous_ping is None
-
-
-def test_orchestrator_judge_receives_every_ping(tmp_path: Path):
-    orch = Orchestrator(topic="t", num_rounds=3, results_dir=tmp_path)
-    dogs, cats, judge = _mock_agent("dogs"), _mock_agent("cats"), _mock_judge()
-    orch.run_debate(dogs, cats, judge)
+def test_judge_receives_every_ping(tmp_path: Path):
+    judge = mock_judge()
+    orch = Orchestrator(topic="t", num_rounds=2, results_dir=tmp_path, coin_flip=lambda: 1)
+    orch.run_debate(mock_agent("dogs"), mock_agent("cats"), judge)
     ping_calls = [c for c in judge.receive.call_args_list if isinstance(c.args[0], Ping)]
-    assert len(ping_calls) == 6  # 3 rounds × 2 pings
+    assert len(ping_calls) == 4
 
 
-def test_orchestrator_persists_result_json(tmp_path: Path):
-    orch = Orchestrator(topic="cats-vs-dogs", num_rounds=2, results_dir=tmp_path)
-    result = orch.run_debate(_mock_agent("dogs"), _mock_agent("cats"), _mock_judge())
+def test_persists_result_json(tmp_path: Path):
+    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path, coin_flip=lambda: 1)
+    orch.run_debate(mock_agent("dogs"), mock_agent("cats"), mock_judge())
     files = list(tmp_path.glob("debate_*.json"))
     assert len(files) == 1
-    payload = json.loads(files[0].read_text(encoding="utf-8"))
-    assert payload["verdict"]["winner"] == result.verdict.winner
-    assert payload["topic"] == "cats-vs-dogs"
+    DebateResult.model_validate(json.loads(files[0].read_text(encoding="utf-8")))
 
 
-def test_orchestrator_broadcasts_opening_brief(tmp_path: Path):
-    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path)
-    dogs, cats, judge = _mock_agent("dogs"), _mock_agent("cats"), _mock_judge()
+def test_broadcasts_opening_brief(tmp_path: Path):
+    dogs, cats, judge = mock_agent("dogs"), mock_agent("cats"), mock_judge()
+    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path, coin_flip=lambda: 1)
     orch.run_debate(dogs, cats, judge)
-    dogs_brief = dogs.receive.call_args_list[0].args[0]
-    cats_brief = cats.receive.call_args_list[0].args[0]
-    judge_brief = judge.receive.call_args_list[0].args[0]
-    assert isinstance(dogs_brief, OpeningBrief) and dogs_brief.side == "dogs"
-    assert isinstance(cats_brief, OpeningBrief) and cats_brief.side == "cats"
-    assert isinstance(judge_brief, OpeningBrief) and judge_brief.side is None
-    assert judge_brief.rubric is not None
+    for agent, side in [(dogs, "dogs"), (cats, "cats")]:
+        briefs = [c for c in agent.receive.call_args_list if isinstance(c.args[0], OpeningBrief)]
+        assert briefs and briefs[0].args[0].side == side
+    judge_briefs = [c for c in judge.receive.call_args_list if isinstance(c.args[0], OpeningBrief)]
+    assert judge_briefs and judge_briefs[0].args[0].rubric is not None
 
 
-def test_orchestrator_raises_when_agent_returns_non_ping(tmp_path: Path):
-    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path)
-    broken = MagicMock()
-    broken.receive.return_value = "not a ping"
+def test_raises_when_agent_returns_non_ping(tmp_path: Path):
+    broken = mock_agent("dogs")
+    broken.receive.side_effect = lambda env: None if isinstance(env, OpeningBrief) else "garbage"
+    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path, coin_flip=lambda: 1)
     with pytest.raises(RuntimeError, match="did not return a Ping"):
-        orch.run_debate(broken, _mock_agent("cats"), _mock_judge())
+        orch.run_debate(broken, mock_agent("cats"), mock_judge())
 
 
-def test_orchestrator_cats_sees_dogs_ping_as_previous(tmp_path: Path):
-    """Within a round, Cats receives Dogs' fresh ping as previous_ping (not the
-    prior round's). This is the chain that makes clash possible in round 1."""
-    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path)
-    dogs, cats, judge = _mock_agent("dogs"), _mock_agent("cats"), _mock_judge()
+def test_second_speaker_sees_opener_ping_as_previous(tmp_path: Path):
+    """Second speaker receives the opener's fresh ping as `previous_ping` —
+    the chain that makes clash possible in round 1."""
+    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path, coin_flip=lambda: 1)
+    dogs, cats, judge = mock_agent("dogs"), mock_agent("cats"), mock_judge()
     orch.run_debate(dogs, cats, judge)
-    cats_turn_call = [c for c in cats.receive.call_args_list if isinstance(c.args[0], YourTurn)][0]
-    prev = cats_turn_call.args[0].previous_ping
+    cats_turn = [c for c in cats.receive.call_args_list if isinstance(c.args[0], YourTurn)][0]
+    prev = cats_turn.args[0].previous_ping
     assert prev is not None and prev.side == "dogs" and prev.round == 1
 
 
-def test_orchestrator_on_event_streams_pings_scores_and_verdict(tmp_path: Path):
-    """The on_event callback fires for every ping, every per-ping score, and
-    the final verdict — in that order, with the correct payloads."""
-    events: list[tuple[str, object]] = []
-    orch = Orchestrator(
-        topic="t",
-        num_rounds=2,
-        results_dir=tmp_path,
-        on_event=lambda kind, payload: events.append((kind, payload)),
-    )
-    orch.run_debate(_mock_agent("dogs"), _mock_agent("cats"), _mock_judge())
-
-    kinds = [k for k, _ in events]
-    # 2 rounds × (1 ping + 1 score per side) = 8 events, then 1 verdict = 9.
-    assert kinds.count("ping") == 4
-    assert kinds.count("score") == 4
-    assert kinds.count("verdict") == 1
-    # Verdict is last.
-    assert kinds[-1] == "verdict"
-    # Each ping is followed by its score for the same side.
-    for i, (k, payload) in enumerate(events[:-1]):
-        if k != "ping":
-            continue
-        nxt_kind, nxt_payload = events[i + 1]
-        assert nxt_kind == "score"
-        assert getattr(payload, "side", None) == getattr(nxt_payload, "side", None)
-
-
-def test_orchestrator_on_event_none_is_noop(tmp_path: Path):
-    """Default behavior (no callback) still produces a complete DebateResult."""
-    orch = Orchestrator(topic="t", num_rounds=1, results_dir=tmp_path, on_event=None)
-    result = orch.run_debate(_mock_agent("dogs"), _mock_agent("cats"), _mock_judge())
-    assert isinstance(result, DebateResult)
-    assert len(result.pings) == 2
+def test_records_scores(tmp_path: Path):
+    """Final DebateResult.scores mirrors what the judge accumulated."""
+    orch = Orchestrator(topic="t", num_rounds=2, results_dir=tmp_path, coin_flip=lambda: 1)
+    result = orch.run_debate(mock_agent("dogs"), mock_agent("cats"), mock_judge())
+    assert isinstance(result.scores[0], Score)
+    assert result.verdict.dogs_total == 20
+    assert result.verdict.cats_total == 18
+    assert result.verdict.winner == "dogs"
+    Verdict.model_validate(result.verdict.model_dump())

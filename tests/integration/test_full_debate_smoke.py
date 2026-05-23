@@ -43,11 +43,15 @@ def test_full_debate_ten_rounds_pings_count(tmp_path: Path, fake_provider_factor
     assert rounds == list(range(1, 11))
 
 
-def test_full_debate_dogs_opens_round_one(tmp_path: Path, fake_provider_factory) -> None:
+def test_full_debate_opener_determined_by_coin_flip(tmp_path: Path, fake_provider_factory) -> None:
+    """Coin flip 1 → dogs opens round 1; 0 → cats opens."""
     sdk = _build_sdk(tmp_path, fake_provider_factory, num_rounds=1)
-    result = sdk.run_debate()
-    first = next(p for p in result.pings if p.round == 1)
-    assert first.side == "dogs"
+    dogs_first = sdk.run_debate(coin_flip=lambda: 1)
+    assert next(p for p in dogs_first.pings if p.round == 1).side == "dogs"
+
+    sdk2 = _build_sdk(tmp_path, fake_provider_factory, num_rounds=1)
+    cats_first = sdk2.run_debate(coin_flip=lambda: 0)
+    assert next(p for p in cats_first.pings if p.round == 1).side == "cats"
 
 
 def test_full_debate_persists_to_disk(tmp_path: Path, fake_provider_factory) -> None:
@@ -84,10 +88,12 @@ def test_two_debates_in_sequence_isolated(tmp_path: Path, fake_provider_factory)
 
 
 def test_full_debate_clash_invariant(tmp_path: Path, fake_provider_factory) -> None:
-    """From round 2 onward every ping must reference the prior opponent ping."""
+    """The very first ping of the debate (whoever opens) has no opponent and
+    skips clash. Every subsequent ping must reference the prior one."""
     sdk = _build_sdk(tmp_path, fake_provider_factory, num_rounds=3)
-    result = sdk.run_debate()
+    result = sdk.run_debate(coin_flip=lambda: 1)  # dogs opens deterministically
+    opener_side = next(p for p in result.pings if p.round == 1).side
     for ping in result.pings:
-        if ping.round == 1 and ping.side == "dogs":
+        if ping.round == 1 and ping.side == opener_side:
             continue
         assert ping.refers_to_ping is not None, f"ping {ping.round}/{ping.side} missing clash"

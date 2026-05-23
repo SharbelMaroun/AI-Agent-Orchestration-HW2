@@ -96,8 +96,7 @@ The CLI is a simple keyboard-driven menu:
   [1] Run a new debate    <- streams every ping + judge score live as the debate runs
   [2] View last verdict
   [3] View cost report
-  [4] List past debates
-  [5] Open a past debate transcript
+  [4] List past debates (pick one to open its transcript)
   [Q] Quit
 
 Choose an option >
@@ -147,7 +146,7 @@ Full Mermaid class diagram + module map: see [`docs/PLAN.md`](docs/PLAN.md) §4 
 
 ### Synchronization invariant
 
-Per PRD §3.2.1, exactly one agent speaks per turn and dialogue order is strictly **Dogs → Cats → Dogs → Cats → … → Dogs → Cats**. The Judge does not produce debate text — it only routes and scores between pings. Dogs always opens round 1.
+Per PRD §3.2.1, exactly one agent speaks per turn and dialogue order strictly alternates between the two sides. The Judge does not produce debate-text pings — it only routes, scores, and announces. Before round 1, the orchestrator runs a coin flip (`1 → Dogs opens, 0 → Cats opens`) and emits a templated Judge announcement (rules + coin-flip result) so the opener choice is visible to the user. Either side can therefore open; once an opener is picked, alternation is strict for the rest of the debate.
 
 ### Judge rubric (per ping, 0–3 each, max 15)
 
@@ -180,7 +179,7 @@ Current state (Phase 7 close):
 
 | Metric | Threshold (CLAUDE.md) | Actual |
 |---|---|---|
-| Test count | — | **190** (188 prior + 2 for the orchestrator live-event callback) |
+| Test count | — | **194** (190 prior + 4 coin-flip / announcement / event-stream tests across split orchestrator files) |
 | Coverage | ≥ 85% | **96%+** |
 | Ruff violations | 0 | **0** |
 | File LOC | ≤ 150 (code lines) | All ≤ 150 |
@@ -214,30 +213,60 @@ Default config uses `gpt-4o-mini` (OpenAI) for all three agents — roughly $0.0
 2. **Model tiering** — Haiku for the high-frequency debaters, Sonnet only for the Judge. ~5× cheaper than Opus across the whole debate.
 3. **Ping word cap** — `max_words_per_ping: 250` in setup.json keeps output tokens bounded per round.
 
-### Cost table — Table 4 (3 real debates on `gpt-4o-mini`)
+### Cost table — Table 4 (6 real debates on `gpt-4o-mini`)
 
-Each row aggregates per-ping token counts from one persisted `DebateResult` (agent LLM calls only; judge scoring/verdict calls are tracked through the gatekeeper at runtime via `get_token_summary()` but aren't separately broken out in the saved JSON yet — see deferred item in `docs/TODO.md`).
+Each row aggregates per-ping token counts from one persisted `DebateResult` (agent LLM calls only; judge scoring/verdict calls happen inside the orchestrator and are not yet broken out in the saved JSON — `_build_cost_report` covers agent-side cost).
 
-| # | Debate file | Wall-clock | Pings | Sum input tokens | Sum output tokens | Cost (USD) | Winner |
-|---|---|---:|---:|---:|---:|---:|---|
-| 1 | `debate_20260522T225325.json` | 3m29s | 20 | 68,156 | 5,957 | $0.0138 | **cats** |
-| 2 | `debate_20260522T231025.json` | 3m23s | 20 | 67,754 | 6,170 | $0.0139 | **cats** |
-| 3 | `debate_20260523T095109.json` | 2m22s | 20 | 59,310 | 5,194 | $0.0120 | **dogs** |
-| **Total** | 3 runs | — | 60 | 195,220 | 17,321 | **$0.0397** | 2 Cats / 1 Dogs |
+| # | File | Winner | Dogs | Cats | Margin | Dogs in/out tok | Cats in/out tok |
+|---|---|---|---:|---:|---:|---|---|
+| 1 | `debate_20260522T225325.json` | **cats** | 140 | 147 | 7 | 32,026 / 2,794 | 36,130 / 3,163 |
+| 2 | `debate_20260522T231025.json` | **cats** | 139 | 146 | 7 | 32,807 / 2,992 | 34,947 / 3,178 |
+| 3 | `debate_20260523T095109.json` | **dogs** | 140 | 136 | 4 | 28,731 / 2,654 | 30,579 / 2,540 |
+| 4 | `debate_20260523T122101.json` | **dogs** | 140 | 120 | 20 | 30,246 / 2,612 | 32,071 / 2,934 |
+| 5 | `debate_20260523T123515.json` | **dogs** | 139 | 130 | 9 | 32,205 / 2,799 | 36,261 / 3,234 |
+| 6 | `debate_20260523T130228.json` | **cats** | 140 | 142 | 2 | 28,710 / 2,210 | 31,414 / 2,952 |
 
-Average debate cost: **$0.013** — well under the configured $5.00 budget. The Cats-favoring asymmetry from the Skill prompts shows up as ~7-point margins, not as cost differences (token volumes are within 15% across all three runs).
+Average cost per debate is roughly **$0.013** at `gpt-4o-mini` list prices — well under the configured $5.00 budget. Token volumes are within ~20% across the six runs.
 
-Regenerate this table from the notebook:
+Regenerate with:
 ```powershell
-uv run jupyter notebook notebooks/analysis.ipynb
+uv run python scripts/cross_debate_analysis.py
 ```
-Cell 6 prints a fresh table against whatever debate JSONs are on disk.
+
+---
+
+## Cross-debate analysis (6 real runs)
+
+After running 6 full debates we re-ran the analysis script to look at the system as a whole rather than one debate at a time. Headline finding: **the system is fair on outcome (3-3 win split) but the personas leak — Cats wins pathos by exactly 1.00 point on average, Dogs wins logos+ethos by ~0.5 each.** The two effects nearly cancel; margins range 2–20 points out of ~150.
+
+| Per-dimension average (60 pings per side) | Dogs | Cats | Gap (cats − dogs) |
+|---|---:|---:|---:|
+| Structure | 3.00 | 2.75 | −0.25 |
+| Logos | 2.98 | 2.53 | **−0.45** |
+| Pathos | 2.00 | 3.00 | **+1.00** |
+| Ethos | 3.00 | 2.45 | **−0.55** |
+| Clash | 2.98 | 2.95 | −0.03 |
+
+The +1.00 pathos gap matches what the Skill prompts ask for (Cats persona = "vivid sensory imagery"; Dogs persona = logos+ethos). It's not a judge bug — it's the persona design landing exactly as specified.
+
+| | |
+|---|---|
+| ![Win record](assets/win_record.png) | ![Margin distribution](assets/margin_distribution.png) |
+| **Win record** — 3-3 across 6 debates. | **Margins per debate** — small (2–9) most runs; one outlier of 20 (debate 4). |
+| ![Dimension averages](assets/dimension_averages.png) | ![Per-dimension radar](assets/per_dimension_radar.png) |
+| **Per-dimension averages** — the persona footprint. | **Radar** — Cats fills pathos; Dogs fills the other four. |
+| ![Score evolution](assets/score_evolution.png) | ![Citation density](assets/citation_density.png) |
+| **Cumulative score per round** — all 6 debates overlaid, showing how tightly the totals track each other. | **Citation density** — both sides cite consistently; Dogs leans slightly heavier on URL citations. |
+| ![Token + cost](assets/token_and_cost.png) | |
+| **Token economy & cost per debate** — output tokens dominate variance; cost stable around $0.013. | |
+
+Regenerate any of these with `uv run python scripts/cross_debate_analysis.py`.
 
 ---
 
 ## Sample output
 
-After a debate completes the orchestrator persists `results/debates/debate_<timestamp>.json` containing every ping, every score, the verdict, and the cost report. View it with menu option 5 ("Open a past debate transcript") or load it in the analysis notebook.
+After a debate completes the orchestrator persists `results/debates/debate_<timestamp>.json` containing every ping, every score, the verdict, and the cost report. View it with menu option 4 ("List past debates → pick one to open its transcript") or load it in the analysis notebook.
 
 ### Real run: `debate_20260522T231025.json`
 

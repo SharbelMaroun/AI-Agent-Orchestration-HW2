@@ -55,11 +55,14 @@ def test_list_past_debates_empty() -> None:
     assert "No past debates found." in writer.all
 
 
-def test_list_past_debates_some(tmp_path) -> None:
+def test_list_past_debates_some(tmp_path, monkeypatch) -> None:
+    """Option 4 now lists numbered debates AND prompts for selection (blank
+    cancels). Empty input from the inner input() returns to the menu."""
     p = tmp_path / "debate_x.json"
     p.write_text("{}", encoding="utf-8")
     sdk = MagicMock()
     sdk.list_past_debates.return_value = [p]
+    monkeypatch.setattr("builtins.input", lambda _p="": "")  # cancel selection
     reader = FakeReader(["4", "q"])
     writer = CapturingWriter()
     run_menu(sdk=sdk, reader=reader, writer=writer)
