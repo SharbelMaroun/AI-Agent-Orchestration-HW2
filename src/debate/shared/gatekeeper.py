@@ -4,21 +4,20 @@ See docs/PRD_gatekeeper.md. Every LLM/search/embedding call in the project
 flows through `ApiGatekeeper.execute(...)`: rate limits per service, FIFO
 backpressure, retries with backoff, token+cost recording, budget alerts.
 
-Internals (rolling windows, per-service state, retry classifier, exceptions,
-QueueStatus) live in `rate_limiter.py` to keep this file under the 150-LOC cap.
+Internals split across sibling modules to keep this file under the 150-LOC
+cap: rolling-window + service-state in `rate_limiter.py`, cost recording +
+budget enforcement in `cost_recorder.py`, pricing math in `pricing.py`.
 """
 
 from __future__ import annotations
 
 import logging
-import threading
 import time
 from collections.abc import Callable
 from typing import Any
 
 from .config import RateLimitConfig, SetupConfig
-from .logger import log_cost_entry
-from .pricing import CostTracker, compute_cost
+from .cost_recorder import CostRecorder
 from .rate_limiter import (
     ApiCallFailedError,
     BudgetExceededError,
@@ -27,7 +26,6 @@ from .rate_limiter import (
     ServiceState,
     is_retryable,
 )
-from .schemas import CompletionResponse
 
 __all__ = [
     "ApiCallFailedError",
@@ -52,14 +50,15 @@ class ApiGatekeeper:
         self.rate_config = rate_config
         self.setup = setup
         self.logger = logger
-        self.cost_logger = cost_logger
         self._sleep = sleep_fn
-        self.tracker = CostTracker()
+        self.recorder = CostRecorder(setup, rate_config, logger, cost_logger)
         self._services: dict[str, ServiceState] = {
             name: ServiceState(lim) for name, lim in rate_config.services.items()
         }
-        self._budget_lock = threading.Lock()
-        self._warned = False
+
+    @property
+    def tracker(self):  # backwards-compat shim for tests/SDK reads
+        return self.recorder.tracker
 
     def _state(self, service: str) -> ServiceState:
         return self._services.get(service) or self._services["default"]
@@ -111,63 +110,12 @@ class ApiGatekeeper:
                         )
                         self._sleep(st.limit.retry_after_seconds * attempt)
                         continue
-                    self._record(result)
+                    self.recorder.record(result)
                     return result
                 raise ApiCallFailedError(f"exhausted retries: {last_exc}") from last_exc
             finally:
                 with st.lock:
                     st.in_flight -= 1
-
-    def _record(self, result: Any) -> None:
-        if not isinstance(result, CompletionResponse):
-            return
-        cost = compute_cost(
-            result.provider,
-            result.model,
-            self.setup.pricing,
-            result.input_tokens,
-            result.output_tokens,
-            result.cache_creation_tokens,
-            result.cache_read_tokens,
-        )
-        self.tracker.record(
-            result.provider,
-            result.model,
-            result.input_tokens,
-            result.output_tokens,
-            result.cache_creation_tokens,
-            result.cache_read_tokens,
-            cost,
-        )
-        if self.cost_logger is not None:
-            log_cost_entry(
-                self.cost_logger,
-                {
-                    "provider": result.provider,
-                    "model": result.model,
-                    "input_tokens": result.input_tokens,
-                    "output_tokens": result.output_tokens,
-                    "cache_creation": result.cache_creation_tokens,
-                    "cache_read": result.cache_read_tokens,
-                    "cost_usd": cost,
-                },
-            )
-        self._check_budget()
-
-    def _check_budget(self) -> None:
-        budget = self.setup.budget_usd
-        if budget <= 0:
-            return
-        ratio = self.tracker.total_usd / budget
-        warn = self.rate_config.budget.warning_threshold_pct / 100
-        hard = self.rate_config.budget.hard_limit_pct / 100
-        with self._budget_lock:
-            if ratio >= hard:
-                self.logger.error("budget exceeded: $%.4f of $%.2f", self.tracker.total_usd, budget)
-                raise BudgetExceededError(f"spent ${self.tracker.total_usd:.4f} of ${budget:.2f}")
-            if ratio >= warn and not self._warned:
-                self._warned = True
-                self.logger.warning("budget at %.1f%% of $%.2f", ratio * 100, budget)
 
     def get_queue_status(self, service: str = "default") -> QueueStatus:
         st = self._state(service)
@@ -175,4 +123,4 @@ class ApiGatekeeper:
             return QueueStatus(service, st.pending, st.in_flight, len(st.minute), len(st.hour))
 
     def get_token_summary(self) -> dict:
-        return self.tracker.summary()
+        return self.recorder.summary()

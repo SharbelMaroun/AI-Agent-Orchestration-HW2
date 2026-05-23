@@ -156,9 +156,7 @@ def test_handle_your_turn_round2_missing_refers_to_ping_auto_fills():
 def test_handle_your_turn_wrong_refers_to_ping_still_raises():
     """If the model returns the *wrong* round number, that's a real clash
     violation — not just a missing field — and must still raise."""
-    agent = _agent(
-        llm_text='{"text": "bad", "citations": [], "refers_to_ping": 99}'
-    )
+    agent = _agent(llm_text='{"text": "bad", "citations": [], "refers_to_ping": 99}')
     opp = _opponent_ping(round_=1)
     with pytest.raises(ClashViolationError):
         agent.handle_your_turn(YourTurn(round=2, previous_ping=opp))

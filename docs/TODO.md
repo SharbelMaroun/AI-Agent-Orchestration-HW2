@@ -742,6 +742,10 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] **Menu option 5 now interleaves scores:** when reopening a saved `DebateResult` JSON, the per-round judge score block prints under each ping (matches the live option-1 layout).
 - [x] **README Sample Output populated** with real verdict + excerpts from `results/debates/debate_20260522T231025.json` (Cats won 146-139).
 - [x] **Score charts generated** from the real run and committed under `assets/` (total_scores, score_breakdown, clash_per_round, per_round_totals). `matplotlib` added to the dev dependency group.
+- [x] **Cost analysis Table 4** populated in README from 3 real debate JSONs (gpt-4o-mini, avg $0.013/run).
+- [x] **CLAUDE.md compliance sweep (post-deep-review):** shrunk `gatekeeper.py` 154→102 LOC by extracting `CostRecorder` into `shared/cost_recorder.py`; split four oversized test files (`test_judge_agent`, `test_gatekeeper`, `test_cli`, `test_coverage_topup`) into focused per-concern files with shared fixture modules (`_gatekeeper_fixtures.py`, `_cli_fixtures.py`). Suite still 190 passing.
+- [x] **ruff format check clean** — applied `ruff format .` to `main.py` + `test_debate_agent.py`.
+- [x] All `src/` and `tests/` files now ≤ 150 code lines (strict count excluding blanks/comments/docstrings).
 - [x] `uv run pytest --cov` passes ≥ 85% (96.08% on Phase 8 sweep, 187 tests)
 - [x] `uv run ruff check .` passes 0 errors
 - [x] `uv run ruff format --check .` clean (after `ruff format .` applied in Phase 8 sweep)
