@@ -150,7 +150,7 @@ All IPC messages: JSON with versioned schema. See `docs/PRD_judge.md` §schema.
 - Embedding model for RAG = `sentence-transformers/all-MiniLM-L6-v2` (local, free) — independent of LLM provider choice.
 - Vector store = ChromaDB (local, embedded, zero-setup).
 - Python 3.10+ (per ruff config).
-- Local development on Windows (Sharbel); cross-platform supported.
+- Local development on Windows; cross-platform supported.
 
 ### 5.1a Environment Variables (`.env`)
 Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A committed `.env.example` documents every variable the project may read.

@@ -3,7 +3,7 @@
 **Version:** 1.00 · References `docs/PRD.md`, `docs/PLAN.md`
 
 **Status legend:** ⬜ Not Started · 🟨 In Progress · ✅ Completed
-**Owner key:** S = Sharbel · P = Partner · ☆ = either
+**Owner key:** ☆ = either of us · ! = blocked on external (rubric / Moodle / vendor)
 **DoD per task:** the deliverable is on disk, syntactically valid, passes its smoke-check (compiles / lints / type-checks / referenced test passes if applicable).
 
 Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks within a phase may be parallelized across the pair.
@@ -123,8 +123,7 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 
 ### 1.1 Setup
 - [ ] Install Claude CLI locally (if not already)
-- [ ] Verify `claude --version` runs on Sharbel's machine
-- [ ] Verify Claude CLI runs on partner's machine
+- [ ] Verify `claude --version` runs on each of our machines
 - [ ] Choose final debate topic phrasing for Stage 1: "Are dogs or cats the better pet?"
 - [ ] Write the manual judge instructions (one paragraph)
 - [ ] Write the manual Dogs-agent role instructions

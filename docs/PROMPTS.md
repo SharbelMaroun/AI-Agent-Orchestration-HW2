@@ -274,7 +274,7 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ## 2026-05-22 — Post-Phase-8 bug fix: SDK never loaded .env
 
-**Context:** First real-key run by Sharbel hit `RuntimeError: GOOGLE_API_KEY not set — required for provider 'google'`. The `.env` file was correctly populated; nothing was reading it.
+**Context:** Our first real-key run hit `RuntimeError: GOOGLE_API_KEY not set — required for provider 'google'`. The `.env` file was correctly populated; nothing was reading it.
 **Goal:** Plumb `python-dotenv` into the actual boot path so `os.environ.get("GOOGLE_API_KEY")` sees the value the user put in `.env`.
 **Root cause:** `debate.shared.config.load_env()` (a `python-dotenv` wrapper) existed since Phase 3.2 but no caller invoked it. The unit tests never failed because they always set env vars via `monkeypatch.setenv(...)`, bypassing `.env` entirely. The integration tests passed because they used mocked providers that don't check env vars.
 **Fix:** `DebateSDK.__init__` now calls `load_env(dotenv_path=".env")` as its first action — before `load_setup` and before any provider construction. Added `dotenv_path` constructor kwarg so tests can pass a tmp path.
@@ -297,15 +297,15 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ## 2026-05-23 — Model bump: gemini-3.1-flash-lite
 
-**Context:** Sharbel pointed out that his other production app uses `gemini-3.1-flash-lite` — a model name newer than this assistant's training-data cutoff. Took it at face value; the Google SDK passes the model name through to the API verbatim, and an invalid name surfaces as an API error immediately.
-**Change:** `config/setup.json.models` updated for all three agents; pricing table entry added (same tier as the previous `gemini-2.5-flash-lite`: $0.10 input / $0.40 output per million tokens — confirmed with Sharbel).
+**Context:** We identified that our other production app uses `gemini-3.1-flash-lite` — a model name newer than this assistant's training-data cutoff. We took it at face value; the Google SDK passes the model name through to the API verbatim, and an invalid name surfaces as an API error immediately.
+**Change:** `config/setup.json.models` updated for all three agents; pricing table entry added (same tier as the previous `gemini-2.5-flash-lite`: $0.10 input / $0.40 output per million tokens — confirmed against our reference setup).
 **Lesson:** Trust the user's lived experience with their own production stack over your own model-family knowledge — your training data has a cutoff; theirs is current.
 
 ---
 
 ## 2026-05-23 — Provider switch: OpenAI gpt-4o-mini
 
-**Context:** Sharbel added `OPENAI_API_KEY` after Gemini's free-tier 20-RPD cap kept blocking the 41-call 10-round debate. Wanted to keep the cost low while actually getting through a real run.
+**Context:** We added `OPENAI_API_KEY` after Gemini's free-tier 20-RPD cap kept blocking the 41-call 10-round debate. We wanted to keep the cost low while actually getting through a real run.
 **Change:** All three agents flipped from `google/gemini-3.1-flash-lite` → `openai/gpt-4o-mini`. Pricing: $0.15 input / $0.60 output per million tokens — roughly $0.01–$0.02 for a full 10-round debate.
 **Why gpt-4o-mini specifically:** It's the practical sweet spot for this debate's structural-JSON-with-rhetoric workload. `gpt-4.1-nano` is slightly cheaper but produces weaker JSON adherence (we'd hit the same `refers_to_ping=None` class of bug we just patched for flash-lite). `gpt-4o` is 5× the price for verdict-quality reasoning the Judge probably doesn't need at this scale.
 **SDK install:** `uv sync --extra openai` (the openai package was an optional extra since Phase 2 — it ships disabled to keep the default install footprint smaller; activating it is one command).
@@ -315,7 +315,7 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ## 2026-05-23 — Live event stream: pings + scores rendered as the debate runs
 
-**Context:** Sharbel's first full-debate run only showed the final verdict — the 10 rounds of pings and the 20 judge scores all happened invisibly, then a wall of text dumped at the end. He wanted to *see* the debate progress: every agent response and every judge ruling, in order.
+**Context:** Our first full-debate run only showed the final verdict — the 10 rounds of pings and the 20 judge scores all happened invisibly, then a wall of text dumped at the end. We wanted to *see* the debate progress: every agent response and every judge ruling, in order.
 **Goal:** Stream debate events to the CLI in real time without breaking the orchestrator's interface for non-CLI consumers (integration tests, future GUI, etc.).
 **Key design decisions:**
   1. **Callback at the Orchestrator boundary, not inside agents.** `Orchestrator.__init__` now accepts `on_event: Callable[[str, Any], None] | None = None`. Each agent stays oblivious to "is anyone watching me." The orchestrator is the only thing that already sees the cross-agent flow (ping → judge → next ping), so it's the right place to fan out events.
@@ -343,9 +343,9 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
-## 2026-05-23 — Bias audit after Sharbel asked "are we overfitted to Cats?"
+## 2026-05-23 — Bias audit after we asked "are we overfitted to Cats?"
 
-**Context:** Sharbel's first two real-key runs both went to Cats (147–140, 146–139). Reasonable question: is the system structurally biased, or is this normal variance?
+**Context:** Our first two real-key runs both went to Cats (147–140, 146–139). Reasonable question: is the system structurally biased, or is this normal variance?
 **Honest answer at the time:** likely a small Cats lean, here's why:
   1. **Pathos asymmetry in the Skill prompts.** Cats prompt explicitly maximizes pathos; Dogs prompt explicitly de-emphasizes it in favor of logos+ethos. Pathos = 20% of the rubric. A consistent +1 pathos per round × 10 rounds = ~10 raw points; the observed margin was 7.
   2. **Speaking order.** Dogs always opens (PRD §3.2.1); Cats replies. The Cats persona is *built to reframe*, which scores well on `clash` every round.

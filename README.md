@@ -303,7 +303,7 @@ Regenerate with `uv run jupyter notebook notebooks/analysis.ipynb` and "Run All"
 
 ### Phase 1 manual debate
 
-Stage 1 manual debate transcript (Phase 1 partner deliverable): see `results/manual_stage1/` once Amr runs the two-CLI session.
+Stage 1 manual debate transcript (Phase 1 partner deliverable): see `results/manual_stage1/` once we run the two-CLI session.
 
 ---
 
@@ -443,7 +443,7 @@ Captured iteratively in [`docs/PROMPTS.md`](docs/PROMPTS.md) — every significa
 - **Mirror prompt-level rules in deterministic code.** The Judge prompt says "ties are forbidden"; `JudgeAgent._tie_break` enforces it independently of what the LLM emits. Defense-in-depth at every contract.
 - **The 150-LOC cap is a feature.** Hitting it forced the `gatekeeper.py` / `rate_limiter.py` / `pricing.py` split, which clarified the public/internal boundary that would have stayed implicit otherwise.
 - **Mocked tests can mask boot-path bugs.** `monkeypatch.setenv()` made unit tests pass without ever exercising `python-dotenv` — the missing `load_env()` call was caught only by the first real-key smoke. Lesson 9 in the table above.
-- **Trust the user's lived experience over your knowledge cutoff.** When Sharbel said his other app uses `gemini-3.1-flash-lite`, the right move was to add it to the pricing table immediately rather than insist on the 2.5 family I knew about.
+- **Trust lived experience over training-data cutoffs.** When we found that our other app uses `gemini-3.1-flash-lite`, the right move was to add it to the pricing table immediately rather than insist on the 2.5 family the assistant's training data knew about.
 
 ---
 
