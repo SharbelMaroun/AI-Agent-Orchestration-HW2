@@ -1,9 +1,7 @@
-"""Top-up tests for branches missed by earlier modules' unit tests.
+"""Top-up tests for branches missed by per-module unit tests.
 
-These don't belong logically inside the per-module test files — they cover
-trivial imports, error branches, and a real daemon-thread roundtrip for the
-watchdog. Kept in one place so they're easy to delete later if a refactor
-makes them redundant.
+Watchdog-thread + logger console branches stay here; ingest CLI edge cases
+live in `test_ingest_cli.py` (split for the 150-LOC test cap, CLAUDE.md §6).
 """
 
 from __future__ import annotations
@@ -12,22 +10,10 @@ import logging
 import time
 from pathlib import Path
 
-import pytest
-
-from debate.services.rag.ingest import main as ingest_main
 from debate.services.watchdog import Watchdog, WatchdogConfig
 from debate.shared import constants
-from debate.shared.config import (
-    ConsoleCfg,
-    CostLog,
-    LoggingConfig,
-    Rotation,
-)
-from debate.shared.logger import (
-    FifoRotatingHandler,
-    configure_root_logger,
-    get_cost_logger,
-)
+from debate.shared.config import ConsoleCfg, CostLog, LoggingConfig, Rotation
+from debate.shared.logger import FifoRotatingHandler, configure_root_logger, get_cost_logger
 
 
 def test_constants_module_is_importable() -> None:
@@ -112,15 +98,14 @@ def test_watchdog_start_stop_real_thread() -> None:
     wd = Watchdog(cfg, logger=logging.getLogger("test"))
     wd.register("dogs", _Proc(), lambda: _Proc())
     wd.start()
-    # Hitting start() twice is a no-op.
-    wd.start()
+    wd.start()  # double-start is a no-op
     time.sleep(0.05)
     wd.stop()
-    assert wd._thread is None  # internal — stop completed
+    assert wd._thread is None
 
 
 def test_watchdog_loop_logs_and_continues_on_exception() -> None:
-    # Force check_once to raise — the _loop must swallow it and keep going.
+    """Force check_once to raise — the _loop must swallow it and keep going."""
     cfg = WatchdogConfig(
         heartbeat_seconds=0.05,
         kill_after_seconds=10.0,
@@ -145,53 +130,3 @@ def test_watchdog_loop_logs_and_continues_on_exception() -> None:
         time.sleep(0.01)
     wd.stop()
     assert iteration["n"] >= 2
-
-
-def test_ingest_main_smoke(tmp_path: Path, monkeypatch) -> None:
-    """Exercise the CLI entrypoint with a deterministic fake embedder so we
-    never load sentence-transformers."""
-    import debate.services.rag.ingest as ingest_mod
-
-    class StubEmbedder:
-        def __init__(self, *_a, **_kw) -> None:
-            pass
-
-        def embed_text(self, t: str) -> list[float]:
-            return [0.1] * 8
-
-        def embed_batch(self, ts: list[str]) -> list[list[float]]:
-            return [[0.1] * 8 for _ in ts]
-
-    monkeypatch.setattr(ingest_mod, "Embedder", StubEmbedder)
-    # Seed the data dir under tmp_path.
-    data_root = tmp_path / "data"
-    (data_root / "dogs").mkdir(parents=True)
-    (data_root / "dogs" / "x.txt").write_text(
-        "---\nsource: t\n---\nbody words go here\n", encoding="utf-8"
-    )
-    # Build a config pointing at the tmp dirs.
-    cfg_path = tmp_path / "setup.json"
-    repo_setup = Path("config/setup.json").read_text(encoding="utf-8")
-    cfg_path.write_text(
-        repo_setup.replace(
-            '"data/{agent}/chroma"',
-            f'"{(tmp_path / "chroma_{agent}").as_posix()}"'.replace("{agent}", "{agent}"),
-        ),
-        encoding="utf-8",
-    )
-    rc = ingest_main(
-        [
-            "--agent",
-            "dogs",
-            "--config",
-            str(cfg_path),
-            "--data-root",
-            str(data_root),
-        ]
-    )
-    assert rc == 0
-
-
-def test_ingest_main_rejects_unknown_agent() -> None:
-    with pytest.raises(SystemExit):
-        ingest_main(["--agent", "fish"])

@@ -214,7 +214,24 @@ Default config uses `gpt-4o-mini` (OpenAI) for all three agents — roughly $0.0
 2. **Model tiering** — Haiku for the high-frequency debaters, Sonnet only for the Judge. ~5× cheaper than Opus across the whole debate.
 3. **Ping word cap** — `max_words_per_ping: 250` in setup.json keeps output tokens bounded per round.
 
-Cost table (Table 4 of the source PDF) will be populated by `notebooks/analysis.ipynb` after the first real debate run. Run the notebook with `uv run jupyter notebook notebooks/analysis.ipynb`.
+### Cost table — Table 4 (3 real debates on `gpt-4o-mini`)
+
+Each row aggregates per-ping token counts from one persisted `DebateResult` (agent LLM calls only; judge scoring/verdict calls are tracked through the gatekeeper at runtime via `get_token_summary()` but aren't separately broken out in the saved JSON yet — see deferred item in `docs/TODO.md`).
+
+| # | Debate file | Wall-clock | Pings | Sum input tokens | Sum output tokens | Cost (USD) | Winner |
+|---|---|---:|---:|---:|---:|---:|---|
+| 1 | `debate_20260522T225325.json` | 3m29s | 20 | 68,156 | 5,957 | $0.0138 | **cats** |
+| 2 | `debate_20260522T231025.json` | 3m23s | 20 | 67,754 | 6,170 | $0.0139 | **cats** |
+| 3 | `debate_20260523T095109.json` | 2m22s | 20 | 59,310 | 5,194 | $0.0120 | **dogs** |
+| **Total** | 3 runs | — | 60 | 195,220 | 17,321 | **$0.0397** | 2 Cats / 1 Dogs |
+
+Average debate cost: **$0.013** — well under the configured $5.00 budget. The Cats-favoring asymmetry from the Skill prompts shows up as ~7-point margins, not as cost differences (token volumes are within 15% across all three runs).
+
+Regenerate this table from the notebook:
+```powershell
+uv run jupyter notebook notebooks/analysis.ipynb
+```
+Cell 6 prints a fresh table against whatever debate JSONs are on disk.
 
 ---
 
@@ -225,6 +242,10 @@ After a debate completes the orchestrator persists `results/debates/debate_<time
 ### Real run: `debate_20260522T231025.json`
 
 10-round debate, both sides on `gpt-4o-mini`, ran in about 3:24 wall-clock.
+
+![Sample terminal output from a real debate run](assets/result_example.png)
+
+*Screenshot above: live stream from menu option 1 — each ping is followed immediately by the judge's per-dimension score and rationale, then the next ping. Full transcript JSON in `results/debates/`.*
 
 **Final verdict:**
 

@@ -141,7 +141,9 @@ def run_menu(
             writer("Goodbye.")
             return
         if choice == "1":
-            writer("Running debate — pings and judge scores will print live as each round completes...")
+            writer(
+                "Running debate — pings and judge scores will print live as each round completes..."
+            )
             try:
                 sdk.run_debate(on_event=_live_event_printer(writer))
             except Exception as exc:  # noqa: BLE001
