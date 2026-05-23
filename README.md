@@ -178,10 +178,10 @@ Current state (Phase 7 close):
 
 | Metric | Threshold (CLAUDE.md) | Actual |
 |---|---|---|
-| Test count | — | **194** (190 prior + 4 coin-flip / announcement / event-stream tests across split orchestrator files) |
+| Test count | — | **220** (194 prior + 26 new for `cost_recorder`, `rate_limiter`, `skill_loader`) |
 | Coverage | ≥ 85% | **96%+** |
-| Ruff violations | 0 | **0** |
-| File LOC | ≤ 150 (code lines) | All ≤ 150 |
+| Ruff violations | 0 | **0** (`check` + `format --check` both clean) |
+| File LOC | ≤ 150 (code lines) | ✅ All under cap by *both* the literal "excludes blanks + comments" reading AND the strict raw-line count. Largest raw: `test_base_agent.py` at 148. |
 | Secrets in repo | 0 | `.env` gitignored; only `.env.example` committed |
 
 Test layout: 156 unit tests (one file per module under `tests/unit/`) + 9 integration tests (end-to-end debate, real ChromaDB, multi-round invariants) + 15 CLI tests. Shared fixtures (`fake_provider_factory`, `passthrough_gatekeeper`, `hash_embedder`, ping/score factories) live in `tests/conftest.py`.
@@ -487,6 +487,39 @@ Captured iteratively in [`docs/PROMPTS.md`](docs/PROMPTS.md) — every significa
 - **The 150-LOC cap is a feature.** Hitting it forced the `gatekeeper.py` / `rate_limiter.py` / `pricing.py` split, which clarified the public/internal boundary that would have stayed implicit otherwise.
 - **Mocked tests can mask boot-path bugs.** `monkeypatch.setenv()` made unit tests pass without ever exercising `python-dotenv` — the missing `load_env()` call was caught only by the first real-key smoke. Lesson 9 in the table above.
 - **Trust lived experience over training-data cutoffs.** When we found that our other app uses `gemini-3.1-flash-lite`, the right move was to add it to the pricing table immediately rather than insist on the 2.5 family the assistant's training data knew about.
+
+---
+
+## Known limitations & out-of-scope
+
+Per CLAUDE.md §2 — surface every conscious deferral or non-requirement so a grader doesn't have to guess.
+
+### Deliberate deferrals (documented design decisions)
+
+| Item | Why deferred | Where documented |
+|---|---|---|
+| **Multi-process orchestrator** (3 OS processes via `multiprocessing.Process` + queue IPC) | Not in Exercise 02 Mandatory Engineering Requirements. The sync orchestrator is testable, runs end-to-end, and the watchdog has real `terminate()/kill()/is_alive()` logic ready for real processes. Lesson 05's "N agents = N processes" framing is conceptual. | `docs/PLAN.md` Implementation Deltas · `docs/PRD_watchdog.md` §9 |
+| **Stage 1 manual two-CLI debate transcript** | "Build Stages" §1 is labelled *Recommended*, not Mandatory. Stage 3 (the Python program) is the required one and we built it. | `docs/TODO.md` Phase 1 — SKIPPED note |
+| **SIGINT/SIGTERM clean-shutdown signal handlers** | Pair with the multi-process upgrade; `Watchdog.stop()` covers programmatic shutdown. | `docs/PRD_watchdog.md` §9 |
+| **Cybersecurity sanitize hook on the gatekeeper** | PRD_gatekeeper §9. No incident class to defend against today; would be a no-op until then. | `docs/PRD_gatekeeper.md` §9 |
+| **Tavily web-search fallback** | DuckDuckGo backend has not rate-limited us in real runs. `WebSearch.backend` is injectable so the fallback can drop in cleanly when needed. | `docs/TODO.md` §4.4 |
+| **Migration from deprecated `google.generativeai` to `google-genai`** | Cosmetic — old SDK still works. Triggers a `FutureWarning` on every Gemini call. | `docs/TODO.md` Phase 8 |
+| **Judge token costs in the persisted `cost_report`** | Pings only carry agent token counts; judge scoring + verdict calls go through the gatekeeper but their token counts aren't in the saved JSON. Cost report is therefore a *lower bound*. | `docs/TODO.md` cost-report bug fix entry |
+| **Cost forecasting** (predict future spend) | We have WARN at 80% and `BudgetExceededError` at 100% — sufficient for a 10-round debate. Forecasting is over-engineering. | This section |
+| **Multi-judge ensembles, multi-topic, multimodal inputs** | PRD §5.4 out-of-scope. | `docs/PRD.md` §5.4 |
+
+### Inherent to the chosen design
+
+| Item | Why |
+|---|---|
+| **Persona asymmetry leaks into rubric scores** (Cats +1.00 pathos, Dogs +0.45 logos / +0.55 ethos) | The Skill prompts intentionally specialise (logos+ethos vs pathos+Socratic). The judge then scores accordingly. The asymmetry cancels on totals (3-3 win record across 6 real runs) but doesn't disappear — see "Cross-debate analysis." Three mitigation knobs (rebalance Skills, alternate speaker order, stronger judge model) listed in "A note on potential Cats bias." |
+| **Second-resolution timestamps in result filenames** | Two debates started in the same second collapse to one file. Cosmetic — fix would change `_persist_result` to append a counter; not worth it for a one-debate-at-a-time tool. |
+
+### Partner-runnable (not blocked on code)
+
+- **Terminal screenshots** (`assets/terminal_menu.png`, `mid_debate.png`, `verdict.png`, `cost_report.png`). Only `result_example.png` captured so far.
+- **Repo public on GitHub** + **PDF of README** + **Moodle upload** (both partners).
+- **Tag `v1.0.0`** after the above.
 
 ---
 

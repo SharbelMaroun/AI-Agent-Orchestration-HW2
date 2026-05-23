@@ -1,10 +1,13 @@
 """Watchdog — heartbeat monitoring + kill-and-restart for hung agents.
 
-See docs/PRD_watchdog.md. Runs as a daemon thread in the parent process; child
-agent processes call `heartbeat(agent_id)` periodically through the heartbeat
-queue. If a child's last heartbeat is older than `kill_after_seconds`, the
-watchdog terminates and restarts it via the registered `restart_fn`.
-"""
+See docs/PRD_watchdog.md. Runs as a daemon thread in the parent process;
+child agent processes call `heartbeat(agent_id)` periodically through the
+heartbeat queue. If a child's last heartbeat is older than
+`kill_after_seconds`, the watchdog terminates and restarts it via the
+registered `restart_fn`.
+
+Dataclasses (`Entry`, `WatchdogConfig`, `Clock`) live in
+`_watchdog_models.py` so this file stays under the raw line cap."""
 
 from __future__ import annotations
 
@@ -12,46 +15,16 @@ import logging
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from typing import Any
 
+from debate.services._watchdog_models import (
+    Clock,  # noqa: F401  (re-exported for tests)
+    Entry,
+    WatchdogConfig,
+    WatchdogFatalError,
+)
 
-class WatchdogFatalError(Exception):
-    """Raised when an agent exceeds max_restarts and cannot recover."""
-
-
-@dataclass
-class _Entry:
-    process: Any
-    restart_fn: Callable[[], Any]
-    last_seen: float
-    restart_count: int = 0
-    fatal: bool = False
-
-
-@dataclass
-class WatchdogConfig:
-    heartbeat_seconds: float
-    kill_after_seconds: float
-    max_restarts_per_agent: int
-    terminate_grace_seconds: float = 2.0
-    poll_interval_seconds: float = 0.5
-
-    @classmethod
-    def from_timeouts(cls, t: Any) -> WatchdogConfig:
-        return cls(
-            heartbeat_seconds=t.watchdog_heartbeat_seconds,
-            kill_after_seconds=t.watchdog_kill_after_seconds,
-            max_restarts_per_agent=t.max_restarts_per_agent,
-        )
-
-
-@dataclass
-class _Clock:
-    fn: Callable[[], float] = field(default=time.monotonic)
-
-    def __call__(self) -> float:
-        return self.fn()
+__all__ = ["Watchdog", "WatchdogConfig", "WatchdogFatalError"]
 
 
 class Watchdog:
@@ -68,7 +41,7 @@ class Watchdog:
         self.logger = logger or logging.getLogger("debate.watchdog")
         self._clock = clock
         self._sleep = sleep_fn
-        self._entries: dict[str, _Entry] = {}
+        self._entries: dict[str, Entry] = {}
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -76,7 +49,7 @@ class Watchdog:
 
     def register(self, agent_id: str, process: Any, restart_fn: Callable[[], Any]) -> None:
         with self._lock:
-            self._entries[agent_id] = _Entry(
+            self._entries[agent_id] = Entry(
                 process=process, restart_fn=restart_fn, last_seen=self._clock()
             )
 
@@ -107,8 +80,7 @@ class Watchdog:
             return list(self._fatal_agents)
 
     def check_once(self) -> None:
-        """Single pass over all registered agents. Exposed for deterministic
-        testing (no need to spin up the daemon thread)."""
+        """Single pass over all registered agents. Exposed for tests."""
         now = self._clock()
         with self._lock:
             stale = [
@@ -127,7 +99,7 @@ class Watchdog:
                 self.logger.exception("watchdog loop iteration failed")
             self._sleep(self.config.poll_interval_seconds)
 
-    def _handle_timeout(self, agent_id: str, entry: _Entry) -> None:
+    def _handle_timeout(self, agent_id: str, entry: Entry) -> None:
         self.logger.warning("AGENT_TIMEOUT agent=%s last_seen=%.3f", agent_id, entry.last_seen)
         self._terminate(agent_id, entry.process)
         with self._lock:
