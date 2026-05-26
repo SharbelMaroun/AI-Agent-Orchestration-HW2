@@ -122,5 +122,9 @@ class ApiGatekeeper:
         with st.lock:
             return QueueStatus(service, st.pending, st.in_flight, len(st.minute), len(st.hour))
 
+    def reset_costs(self) -> None:
+        """Start a fresh per-run token/cost report."""
+        self.recorder.reset()
+
     def get_token_summary(self) -> dict:
         return self.recorder.summary()

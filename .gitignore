@@ -33,3 +33,4 @@ data/*/chroma/
 
 # Runtime log output (regenerated on every run)
 results/logs/
+results/cost_log.jsonl

@@ -1,10 +1,10 @@
 """DebateSDK — sole entry point per CLAUDE.md §4 (no business logic in CLI/GUI).
 
-The SDK wires concrete agents to the Orchestrator. The Gatekeeper is the
-real Phase 4.1 class once it exists; until then a passthrough stand-in is
-injected so the SDK is usable by the CLI for end-to-end smoke runs.
-Construction-time dependency injection (providers, gatekeeper, results_dir)
-lets tests swap any of these without touching the SDK body.
+The SDK wires concrete agents to the Orchestrator and builds the real
+ApiGatekeeper by default, so normal CLI runs get rate limiting, retries,
+and token/cost tracking. Construction-time dependency injection
+(providers, gatekeeper, results_dir) lets tests swap any dependency
+without touching the SDK body.
 """
 
 from __future__ import annotations
@@ -18,14 +18,21 @@ from debate.services.agents.cats_agent import CatsAgent
 from debate.services.agents.dogs_agent import DogsAgent
 from debate.services.agents.judge_agent import JudgeAgent
 from debate.services.orchestrator import Orchestrator
-from debate.shared.config import SetupConfig, load_env, load_setup
+from debate.shared.config import (
+    SetupConfig,
+    load_env,
+    load_logging,
+    load_rate_limits,
+    load_setup,
+)
+from debate.shared.gatekeeper import ApiGatekeeper
 from debate.shared.llm_provider.base import build_provider
+from debate.shared.logger import get_cost_logger, get_logger
 from debate.shared.schemas import DebateResult, Verdict
 
 
 class _PassthroughGatekeeper:
-    """Stub until Phase 4.1 lands the real ApiGatekeeper. Honors the
-    Protocol `BaseAgent` expects so it drops in without agent changes."""
+    """Test helper for callers that want unmetered local execution."""
 
     def execute(
         self, api_call: Callable, *args: Any, service: str = "default", **kwargs: Any
@@ -41,6 +48,8 @@ class DebateSDK:
         self,
         setup: SetupConfig | None = None,
         setup_path: str | Path = "config/setup.json",
+        rate_limits_path: str | Path = "config/rate_limits.json",
+        logging_path: str | Path = "config/logging_config.json",
         gatekeeper: Any | None = None,
         results_dir: Path | str = "results/debates",
         provider_factory: Callable[[str], Any] = build_provider,
@@ -49,10 +58,24 @@ class DebateSDK:
         # Read .env before any provider tries to look up an API key.
         load_env(dotenv_path)
         self.setup = setup if setup is not None else load_setup(setup_path)
-        self.gatekeeper = gatekeeper or _PassthroughGatekeeper()
+        self.gatekeeper = gatekeeper or self._build_gatekeeper(rate_limits_path, logging_path)
         self.results_dir = Path(results_dir)
         self.provider_factory = provider_factory
         self._last_result: DebateResult | None = None
+
+    def _build_gatekeeper(
+        self,
+        rate_limits_path: str | Path,
+        logging_path: str | Path,
+    ) -> ApiGatekeeper:
+        log_cfg = load_logging(logging_path)
+        logger = get_logger("gatekeeper", log_cfg)
+        return ApiGatekeeper(
+            load_rate_limits(rate_limits_path),
+            self.setup,
+            logger,
+            get_cost_logger(log_cfg),
+        )
 
     def run_debate(
         self,
@@ -61,6 +84,8 @@ class DebateSDK:
         coin_flip: Callable[[], int] | None = None,
     ) -> DebateResult:
         cfg = self.setup
+        if hasattr(self.gatekeeper, "reset_costs"):
+            self.gatekeeper.reset_costs()
         dogs = DogsAgent(
             provider=self.provider_factory(cfg.models["dogs"].provider),
             gatekeeper=self.gatekeeper,
@@ -83,6 +108,9 @@ class DebateSDK:
             "on_event": on_event,
             "models": cfg.models,
             "pricing": cfg.pricing,
+            "cost_report_factory": self.gatekeeper.get_token_summary
+            if hasattr(self.gatekeeper, "get_token_summary")
+            else None,
         }
         if coin_flip is not None:
             orch_kwargs["coin_flip"] = coin_flip

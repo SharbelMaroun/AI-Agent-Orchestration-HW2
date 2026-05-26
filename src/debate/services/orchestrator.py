@@ -35,12 +35,13 @@ class Orchestrator:
         self,
         topic: str,
         num_rounds: int,
-        rules: str = "≤250 words per ping, JSON-only replies, clash required from round 2.",
+        rules: str = "<=250 words per ping, JSON-only replies, clash required from round 2.",
         results_dir: Path | str = "results/debates",
         on_event: OnEvent | None = None,
         coin_flip: CoinFlip = lambda: random.randint(0, 1),
         models: dict | None = None,
         pricing: dict | None = None,
+        cost_report_factory: Callable[[], dict] | None = None,
     ) -> None:
         self.topic = topic
         self.num_rounds = num_rounds
@@ -50,6 +51,7 @@ class Orchestrator:
         self.coin_flip = coin_flip
         self.models = models or {}
         self.pricing = pricing or {}
+        self.cost_report_factory = cost_report_factory
         self.pings: list[Ping] = []
 
     def _emit(self, kind: str, payload: Any) -> None:
@@ -81,12 +83,17 @@ class Orchestrator:
             pings=self.pings,
             scores=list(judge.scores),
             verdict=verdict,
-            cost_report=build_cost_report(self.pings, self.models, self.pricing),
+            cost_report=self._build_cost_report(),
             started_at=started_at,
             finished_at=datetime.now(timezone.utc),
         )
         persist_result(result, self.results_dir)
         return result
+
+    def _build_cost_report(self) -> dict:
+        if self.cost_report_factory is not None:
+            return self.cost_report_factory()
+        return build_cost_report(self.pings, self.models, self.pricing)
 
     def _broadcast_opening_brief(self, dogs: Any, cats: Any, judge: JudgeAgent) -> None:
         dogs.receive(make_brief(self.topic, self.num_rounds, self.rules, side="dogs"))

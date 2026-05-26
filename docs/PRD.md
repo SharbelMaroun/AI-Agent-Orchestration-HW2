@@ -145,7 +145,7 @@ All IPC messages: JSON with versioned schema. See `docs/PRD_judge.md` §schema.
 ## 5. Assumptions, Dependencies, Constraints
 
 ### 5.1 Assumptions
-- **LLM provider is configurable.** Default = Google Gemini (`gemini-2.5-flash` for Dogs/Cats, `gemini-2.5-pro` for the Judge). The code uses an `LLMProvider` abstraction (see `PLAN.md` ADR-009) with three registered providers — `google`, `anthropic`, `openai` — selectable per-agent via `config/setup.json.models`.
+- **LLM provider is configurable.** Default = OpenAI `gpt-4o-mini` for all three agents. The code uses an `LLMProvider` abstraction (see `PLAN.md` ADR-009) with three registered providers — `openai`, `google`, `anthropic` — selectable per-agent via `config/setup.json.models`.
 - Web search tool = a free or low-cost provider (e.g., DuckDuckGo API, Tavily free tier).
 - Embedding model for RAG = `sentence-transformers/all-MiniLM-L6-v2` (local, free) — independent of LLM provider choice.
 - Vector store = ChromaDB (local, embedded, zero-setup).
@@ -155,17 +155,17 @@ All IPC messages: JSON with versioned schema. See `docs/PRD_judge.md` §schema.
 ### 5.1a Environment Variables (`.env`)
 Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A committed `.env.example` documents every variable the project may read.
 
-- `GOOGLE_API_KEY` — required for the default config (all three agents use Google Gemini).
+- `OPENAI_API_KEY` — required for the default config (all three agents use OpenAI).
 - `ANTHROPIC_API_KEY` — required only if any agent's `provider` is set to `"anthropic"`.
 - `OPENAI_API_KEY` — required only if any agent's `provider` is set to `"openai"`.
 - `TAVILY_API_KEY` — optional, only if web search falls back to Tavily.
 
-**One API key serves all three agents using the same provider.** Keys are account-level, not per-agent. If all three agents use Google, only `GOOGLE_API_KEY` is needed.
+**One API key serves all three agents using the same provider.** Keys are account-level, not per-agent. If all three agents use OpenAI, only `OPENAI_API_KEY` is needed.
 
 ### 5.2 Dependencies (as installed)
 - `google-generativeai` — Gemini provider (default)
 - `anthropic` — Anthropic provider
-- `openai` — OpenAI provider (optional extra; install via `uv sync --extra openai`)
+- `openai` — OpenAI provider (default; install via `uv sync --extra openai`)
 - `chromadb` — vector store
 - `sentence-transformers` — embeddings
 - `duckduckgo-search` — web search
@@ -199,10 +199,10 @@ PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md
 |---|---|---|---|
 | 0 | Docs (this PRD + PLAN + per-mechanism PRDs + TODO + PROMPTS) | TODO Phase 0 | ✅ Complete |
 | 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | TODO Phase 2 + 3 | ✅ Complete |
-| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (187 tests · 96.08% coverage) |
+| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (real SDK gatekeeper default; 95.78% coverage) |
 | 4 | Add RAG to Pro and Con | TODO Phase 5 | ✅ Complete (30 curated passages, ChromaDB persistent) |
-| 5 | Polish: terminal menu, README screenshots, analysis notebook, cost report | TODO Phase 7 | ⬜ Not started |
-| 6 | Submission: pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ⬜ Not started |
+| 5 | Polish: terminal menu, README, analysis notebook, cost report | TODO Phase 7 | ✅ Complete except final real-run evidence capture |
+| 6 | Submission: CI, pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | 🟨 Code gates complete; screenshots, tag, and Moodle upload remain |
 
 ---
 
@@ -215,7 +215,7 @@ The project passes if:
 4. `uv run pytest --cov` reports ≥ 85% coverage and 0 failures.
 5. `uv run ruff check` reports 0 violations.
 6. No `.env`, API keys, or other secrets in the repo history.
-7. README contains setup, usage, screenshots, Stage-1 manual transcript, and cost analysis.
+7. README contains setup, usage, final evidence checklist, and cost analysis.
 8. `docs/` contains PRD, PLAN, TODO, PROMPTS, and all per-mechanism PRDs.
 
 ---

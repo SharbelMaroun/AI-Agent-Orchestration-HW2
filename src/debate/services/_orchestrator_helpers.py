@@ -54,5 +54,5 @@ def persist_result(result: DebateResult, results_dir: Path) -> Path:
 
 def build_cost_report(pings: list[Ping], models: dict, pricing: dict) -> dict:
     """Per-ping token totals + USD cost from `setup.pricing`. Agent-side
-    only — judge calls aren't tracked in pings."""
+    only. Normal SDK runs pass the full gatekeeper summary instead."""
     return cost_report_from_pings(pings, models, pricing)
