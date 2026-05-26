@@ -201,8 +201,8 @@ PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md
 | 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | TODO Phase 2 + 3 | ✅ Complete |
 | 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (real SDK gatekeeper default; 92%+ coverage) |
 | 4 | Add RAG + web search to Pro and Con | TODO Phase 5 | ✅ Complete (default SDK path wires DuckDuckGo + ChromaDB RAG) |
-| 5 | Polish: terminal menu, README, analysis notebook, cost report | TODO Phase 7 | ✅ Complete except final real-run evidence capture |
-| 6 | Submission: CI, pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ✅ Code gates, screenshots, and evidence captured |
+| 5 | Polish: terminal menu, README, analysis notebook, cost report | TODO Phase 7 | ✅ Complete; final process-mode real-run evidence captured |
+| 6 | Submission: CI, pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ✅ Code gates, screenshots, docs, and evidence captured; Moodle upload remains the partner/admin step |
 
 ---
 

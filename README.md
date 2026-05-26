@@ -45,7 +45,7 @@ The Judge moderates all communication (no direct Dogs ↔ Cats). Every ping is J
 | 3 | Core code (schemas, providers, agents, orchestrator, SDK) | ✅ Complete |
 | 4 | Engineering (gatekeeper, watchdog, logger, search) | ✅ Complete |
 | 5 | RAG (embedder, store, ingest, 30 curated passages) | ✅ Complete |
-| 6 | Tests + coverage ≥ 85% | ✅ Complete — **96%+** |
+| 6 | Tests + coverage ≥ 85% | ✅ Complete — **92%+** on the final process-mode suite |
 | 7 | Polish (CLI menu, README full report, notebook, class diagram, Gemini provider, Skills restructure) | ✅ Complete |
 | 8 | Submission (CI, repo hygiene, final evidence capture) | ✅ Complete — CI gates, real-run evidence, screenshots, and submission artifacts documented |
 
@@ -164,7 +164,7 @@ Per PRD §3.2.1, exactly one agent speaks per turn and dialogue order strictly a
 
 ### Stage 1 manual discovery transcript
 
-Before the final Python process orchestrator, we ran a short manual two-terminal discovery pass to understand the debate dynamic and parent/child routing rule:
+Before the final Python process orchestrator, we ran a manual parent-mediated discovery pass to understand the debate dynamic and parent/child routing rule. The full Stage 1 transcript is preserved in [`docs/STAGE1_MANUAL_DEBATE.md`](docs/STAGE1_MANUAL_DEBATE.md); excerpt:
 
 ```text
 Parent/Judge: Topic is "Are dogs or cats the better pet?" Dogs opens. Keep every reply under 250 words, cite at least one source when possible, and address the previous claim.
@@ -209,17 +209,17 @@ uv run ruff check .           # or: just lint
 just ci
 ```
 
-Current state (Phase 7 close):
+Current state (final process-mode sweep):
 
 | Metric | Threshold (CLAUDE.md) | Actual |
 |---|---|---|
-| Test count | — | **221** |
-| Coverage | ≥ 85% | **95.78%** |
+| Test count | — | **234** |
+| Coverage | ≥ 85% | **92.66%** |
 | Ruff violations | 0 | **0** (`check` + `format --check` both clean) |
 | File LOC | ≤ 150 (code lines) | ✅ All under cap by *both* the literal "excludes blanks + comments" reading AND the strict raw-line count. Largest raw: `test_base_agent.py` at 148. |
 | Secrets in repo | 0 | `.env` gitignored; only `.env.example` committed |
 
-Test layout: 156 unit tests (one file per module under `tests/unit/`) + 9 integration tests (end-to-end debate, real ChromaDB, multi-round invariants) + 15 CLI tests. Shared fixtures (`fake_provider_factory`, `passthrough_gatekeeper`, `hash_embedder`, ping/score factories) live in `tests/conftest.py`.
+Test layout: unit tests mirror the production modules, with integration coverage for end-to-end debate flow, real ChromaDB retrieval, multi-round invariants, CLI behavior, and process orchestration. Shared fixtures (`fake_provider_factory`, `passthrough_gatekeeper`, `hash_embedder`, ping/score factories) live in `tests/conftest.py`.
 
 ---
 
@@ -233,6 +233,7 @@ Pricing per model (USD per million tokens, list prices as of submission — veri
 
 | Provider | Model | Input $/M | Output $/M |
 |---|---|---:|---:|
+| OpenAI | `gpt-4o-mini` | 0.15 | 0.60 |
 | Google | `gemini-3.1-flash-lite` | 0.10 | 0.40 |
 | Google | `gemini-2.5-flash` | 0.30 | 2.50 |
 | Google | `gemini-2.5-pro` | 1.25 | 10.00 |
@@ -247,7 +248,7 @@ Default config uses `gpt-4o-mini` (OpenAI) for all three agents. To switch provi
 2. **Model tiering** — Haiku for the high-frequency debaters, Sonnet only for the Judge. ~5× cheaper than Opus across the whole debate.
 3. **Ping word cap** — `max_words_per_ping: 250` in setup.json keeps output tokens bounded per round.
 
-### Cost table — Table 4 (6 real debates on `gpt-4o-mini`)
+### Cost table — Table 4 (real debates on `gpt-4o-mini`)
 
 Each row aggregates token counts from persisted `DebateResult.cost_report`. Current SDK runs use the real `ApiGatekeeper` by default, so the saved report includes debater calls, judge scoring calls, and the final judge verdict call.
 
@@ -259,8 +260,9 @@ Each row aggregates token counts from persisted `DebateResult.cost_report`. Curr
 | 4 | `debate_20260523T122101.json` | **dogs** | 140 | 120 | 20 | 30,246 / 2,612 | 32,071 / 2,934 |
 | 5 | `debate_20260523T123515.json` | **dogs** | 139 | 130 | 9 | 32,205 / 2,799 | 36,261 / 3,234 |
 | 6 | `debate_20260523T130228.json` | **cats** | 140 | 142 | 2 | 28,710 / 2,210 | 31,414 / 2,952 |
+| 7 | `debate_20260526T180352.json` | **cats** | 140 | 147 | 7 | 340,288 total input | 8,019 total output |
 
-Average cost per debate is roughly **$0.013** at `gpt-4o-mini` list prices — well under the configured $5.00 budget. Token volumes are within ~20% across the six runs.
+The first six rows are the earlier baseline real runs used for the cross-debate analysis. The final process-mode evidence run, `debate_20260526T180352.json`, includes the multiprocessing path, mandatory web search/RAG wiring, judge scoring, and final verdict cost in one saved report: **$0.0559** total at `gpt-4o-mini` list prices. This remains well under the configured **$5.00** budget.
 
 Regenerate with:
 ```powershell
@@ -292,7 +294,7 @@ The +1.00 pathos gap matches what the Skill prompts ask for (Cats persona = "viv
 | ![Score evolution](assets/score_evolution.png) | ![Citation density](assets/citation_density.png) |
 | **Cumulative score per round** — all 6 debates overlaid, showing how tightly the totals track each other. | **Citation density** — both sides cite consistently; Dogs leans slightly heavier on URL citations. |
 | ![Token + cost](assets/token_and_cost.png) | |
-| **Token economy & cost per debate** — output tokens dominate variance; cost stable around $0.013. | |
+| **Token economy & cost per debate** — output tokens dominate variance in the six-run baseline; the final process-mode run costs about $0.0559 with web search/RAG evidence enabled. | |
 
 Regenerate any of these with `uv run python scripts/cross_debate_analysis.py`.
 
