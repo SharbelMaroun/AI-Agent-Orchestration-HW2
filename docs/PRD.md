@@ -145,7 +145,7 @@ All IPC messages: JSON with versioned schema. See `docs/PRD_judge.md` §schema.
 ## 5. Assumptions, Dependencies, Constraints
 
 ### 5.1 Assumptions
-- **LLM provider is configurable.** Default = Google Gemini (`gemini-2.5-flash` for Dogs/Cats, `gemini-2.5-pro` for the Judge). The code uses an `LLMProvider` abstraction (see `PLAN.md` ADR-009) with three registered providers — `google`, `anthropic`, `openai` — selectable per-agent via `config/setup.json.models`.
+- **LLM provider is configurable.** Default = OpenAI `gpt-4o-mini` for all three agents. The code uses an `LLMProvider` abstraction (see `PLAN.md` ADR-009) with three registered providers — `openai`, `google`, `anthropic` — selectable per-agent via `config/setup.json.models`.
 - Web search tool = a free or low-cost provider (e.g., DuckDuckGo API, Tavily free tier).
 - Embedding model for RAG = `sentence-transformers/all-MiniLM-L6-v2` (local, free) — independent of LLM provider choice.
 - Vector store = ChromaDB (local, embedded, zero-setup).
@@ -155,17 +155,17 @@ All IPC messages: JSON with versioned schema. See `docs/PRD_judge.md` §schema.
 ### 5.1a Environment Variables (`.env`)
 Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A committed `.env.example` documents every variable the project may read.
 
-- `GOOGLE_API_KEY` — required for the default config (all three agents use Google Gemini).
+- `OPENAI_API_KEY` — required for the default config (all three agents use OpenAI).
 - `ANTHROPIC_API_KEY` — required only if any agent's `provider` is set to `"anthropic"`.
 - `OPENAI_API_KEY` — required only if any agent's `provider` is set to `"openai"`.
 - `TAVILY_API_KEY` — optional, only if web search falls back to Tavily.
 
-**One API key serves all three agents using the same provider.** Keys are account-level, not per-agent. If all three agents use Google, only `GOOGLE_API_KEY` is needed.
+**One API key serves all three agents using the same provider.** Keys are account-level, not per-agent. If all three agents use OpenAI, only `OPENAI_API_KEY` is needed.
 
 ### 5.2 Dependencies (as installed)
 - `google-generativeai` — Gemini provider (default)
 - `anthropic` — Anthropic provider
-- `openai` — OpenAI provider (optional extra; install via `uv sync --extra openai`)
+- `openai` — OpenAI provider (default; install via `uv sync --extra openai`)
 - `chromadb` — vector store
 - `sentence-transformers` — embeddings
 - `duckduckgo-search` — web search

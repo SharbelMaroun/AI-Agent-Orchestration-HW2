@@ -8,6 +8,7 @@ compiles before any concrete tool implementations land."""
 from __future__ import annotations
 
 from abc import abstractmethod
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from debate.services.agents._debate_agent_helpers import (
@@ -85,7 +86,21 @@ class DebateAgent(BaseAgent):
         evidence = self._collect_evidence(query)
         prompt = self._build_user_prompt(envelope.previous_ping, evidence, envelope.round)
         response = self.generate(prompt)
-        ping = parse_ping_json(response.text, side=self.side, round_=envelope.round)
+        try:
+            ping = parse_ping_json(response.text, side=self.side, round_=envelope.round)
+        except PingParseError:
+            repair = self.generate(self._repair_prompt(response.text, envelope.round))
+            response = response.model_copy(
+                update={
+                    "text": repair.text,
+                    "input_tokens": response.input_tokens + repair.input_tokens,
+                    "output_tokens": response.output_tokens + repair.output_tokens,
+                }
+            )
+            try:
+                ping = parse_ping_json(response.text, side=self.side, round_=envelope.round)
+            except PingParseError:
+                ping = self._fallback_ping(response.text, envelope.round, envelope.previous_ping)
         # Defensive: smaller models sometimes omit `refers_to_ping` even when
         # the prompt asks for it. Auto-fill from envelope context — the
         # Judge's `clash` dimension separately scores rhetorical engagement.
@@ -95,6 +110,29 @@ class DebateAgent(BaseAgent):
         ping.tokens_in = response.input_tokens
         ping.tokens_out = response.output_tokens
         return ping
+
+    def _repair_prompt(self, bad_reply: str, round_: int) -> str:
+        return (
+            "Your previous reply was not valid JSON. Convert it into exactly one JSON object "
+            f'for round {round_}: {{"text":"<argument>","citations":[],"refers_to_ping":null}}. '
+            f"No prose outside JSON. Previous reply:\n{bad_reply}"
+        )
+
+    def _fallback_ping(
+        self,
+        text: str,
+        round_: int,
+        previous_ping: Ping | None,
+    ) -> Ping:
+        clean = text.strip() or "The model returned an empty non-JSON argument."
+        return Ping(
+            round=round_,
+            side=self.side,
+            text=clean,
+            citations=[],
+            refers_to_ping=previous_ping.round if previous_ping is not None else None,
+            timestamp=datetime.now(timezone.utc),
+        )
 
     def receive(self, envelope: object) -> Ping | None:
         if isinstance(envelope, OpeningBrief):

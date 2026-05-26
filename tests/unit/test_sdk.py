@@ -128,4 +128,4 @@ def test_sdk_persists_gatekeeper_cost_report_with_judge_calls(tmp_path: Path):
     result = sdk.run_debate()
     report = result.cost_report
     assert report["total_usd"] > 0
-    assert report["by_model"]["google/gemini-2.5-flash"]["input_tokens"] == 25
+    assert report["by_model"]["openai/gpt-4o-mini"]["input_tokens"] == 25

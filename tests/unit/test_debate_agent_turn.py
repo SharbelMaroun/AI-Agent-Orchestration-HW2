@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from debate.services.agents.debate_agent import ClashViolationError
-from debate.shared.schemas import OpeningBrief, Ping, YourTurn
+from debate.shared.schemas import CompletionResponse, OpeningBrief, Ping, YourTurn
 from tests.unit._debate_agent_test_helpers import agent, opponent_ping
 
 
@@ -44,6 +44,53 @@ def test_handle_your_turn_round2_missing_refers_to_ping_auto_fills():
     whether the ping *rhetorically* engaged the opponent."""
     a = agent(llm_text='{"text": "no clash here", "citations": []}')
     ping = a.handle_your_turn(YourTurn(round=2, previous_ping=opponent_ping(round_=1)))
+    assert ping.refers_to_ping == 1
+
+
+def test_handle_your_turn_repairs_non_json_reply_once():
+    a = agent(llm_text="not json")
+    a.provider.complete.side_effect = [
+        CompletionResponse(
+            text="cats are graceful, but dogs help people",
+            input_tokens=11,
+            output_tokens=22,
+            model="m",
+            provider="anthropic",
+        ),
+        CompletionResponse(
+            text='{"text": "repaired argument", "citations": []}',
+            input_tokens=7,
+            output_tokens=8,
+            model="m",
+            provider="anthropic",
+        ),
+    ]
+    ping = a.handle_your_turn(YourTurn(round=1, previous_ping=None))
+    assert ping.text == "repaired argument"
+    assert ping.tokens_in == 18
+    assert ping.tokens_out == 30
+
+
+def test_handle_your_turn_wraps_failed_repair_as_ping():
+    a = agent(llm_text="not json")
+    a.provider.complete.side_effect = [
+        CompletionResponse(
+            text="first prose answer",
+            input_tokens=11,
+            output_tokens=22,
+            model="m",
+            provider="anthropic",
+        ),
+        CompletionResponse(
+            text="still prose, but usable as an argument",
+            input_tokens=7,
+            output_tokens=8,
+            model="m",
+            provider="anthropic",
+        ),
+    ]
+    ping = a.handle_your_turn(YourTurn(round=2, previous_ping=opponent_ping(round_=1)))
+    assert ping.text == "still prose, but usable as an argument"
     assert ping.refers_to_ping == 1
 
 

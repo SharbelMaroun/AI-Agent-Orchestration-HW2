@@ -35,7 +35,7 @@ class Orchestrator:
         self,
         topic: str,
         num_rounds: int,
-        rules: str = "≤250 words per ping, JSON-only replies, clash required from round 2.",
+        rules: str = "<=250 words per ping, JSON-only replies, clash required from round 2.",
         results_dir: Path | str = "results/debates",
         on_event: OnEvent | None = None,
         coin_flip: CoinFlip = lambda: random.randint(0, 1),

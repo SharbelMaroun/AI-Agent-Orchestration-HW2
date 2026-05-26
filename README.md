@@ -22,7 +22,7 @@ Three AI agents — **Dogs** (logos + ethos), **Cats** (pathos + Socratic), and 
 
 ## TL;DR
 
-Run `uv sync`, copy `.env.example` to `.env`, add `GOOGLE_API_KEY=...` (the current `config/setup.json` default is Gemini), then `uv run python -m debate`. Choose option 1 from the menu and a full 10-round debate runs end-to-end, producing a JSON transcript under `results/debates/` and a winner declared by the Judge. The quality gates are automated in `.github/workflows/ci.yml`: pytest coverage, Ruff lint, and Ruff format check.
+Run `uv sync --extra openai`, copy `.env.example` to `.env`, add `OPENAI_API_KEY=...` (the current `config/setup.json` default is OpenAI), then `uv run python -m debate`. Choose option 1 from the menu and a full 10-round debate runs end-to-end, producing a JSON transcript under `results/debates/` and a winner declared by the Judge. The quality gates are automated in `.github/workflows/ci.yml`: pytest coverage, Ruff lint, and Ruff format check.
 
 ---
 
@@ -62,13 +62,12 @@ See `docs/TODO.md` for the full ~600-task breakdown.
 
 ```powershell
 # 1. Install dependencies (uses uv — see CLAUDE.md §11)
-uv sync
+uv sync --extra openai
 
 # 2. Set up secrets
 cp .env.example .env
-# Edit .env and set GOOGLE_API_KEY=...   (default config uses Gemini)
-# Get a key at https://aistudio.google.com/app/apikey
-# To use Anthropic or OpenAI instead, edit config/setup.json.models
+# Edit .env and set OPENAI_API_KEY=...   (default config uses OpenAI)
+# To use Anthropic or Gemini instead, edit config/setup.json.models
 # and set the corresponding *_API_KEY in .env. See .env.example.
 
 # 3. Ingest the RAG corpora (one-time per machine)
@@ -205,7 +204,7 @@ Pricing per model (USD per million tokens, list prices as of submission — veri
 | Anthropic | `claude-sonnet-4-6` | 3.00 | 15.00 |
 | Anthropic | `claude-opus-4-7` | 15.00 | 75.00 |
 
-Default config uses `gemini-2.5-flash` (Google) for all three agents. To switch providers, edit `config/setup.json.models` (each agent independently) and set the matching `*_API_KEY` in `.env`. Available registered providers: `openai`, `google` (Gemini), `anthropic`. Budget cap = $5.00 (`budget_usd`); the gatekeeper logs a WARNING at 80% and raises `BudgetExceededError` at 100%.
+Default config uses `gpt-4o-mini` (OpenAI) for all three agents. To switch providers, edit `config/setup.json.models` (each agent independently) and set the matching `*_API_KEY` in `.env`. Available registered providers: `openai`, `google` (Gemini), `anthropic`. Budget cap = $5.00 (`budget_usd`); the gatekeeper logs a WARNING at 80% and raises `BudgetExceededError` at 100%.
 
 **Optimization strategies in this project:**
 1. **Prompt caching** — Anthropic provider marks the system prompt and first messages with `cache_control: { type: "ephemeral" }` (PRD_gatekeeper §9a). Cache reads cost 10% of base input price; the cost report exposes `cache_read_pct`.

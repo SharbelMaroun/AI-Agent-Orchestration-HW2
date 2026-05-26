@@ -3,7 +3,7 @@
 **Version:** 1.00 · **Status:** Approved (ADRs final; implementation deltas noted inline below) · References: `docs/PRD.md`
 
 > **Implementation deltas vs. this PLAN (as of Phase 7 close):**
-> - `LLMProvider` registry ships **three** providers, not two: `google` (Gemini, default), `anthropic`, `openai`. `setup.json.models` currently defaults all three agents to `gemini-2.5-flash`.
+> - `LLMProvider` registry ships **three** providers, not two: `openai` (default), `google` (Gemini), and `anthropic`. `setup.json.models` currently defaults all three agents to `gpt-4o-mini`.
 > - Per-agent system prompts moved from `prompts/<side>_system_prompt.md` (flat files) to `skills/<side>/SKILL.md` (directories with YAML frontmatter) per Lesson 05 §5. `src/debate/shared/skill_loader.py` parses the new shape.
 > - The terminal-menu CLI (`src/debate/main.py`) is implemented; `DebateSDK` is its sole dependency.
 > - The architecture details below remain accurate; only file paths and provider list changed.

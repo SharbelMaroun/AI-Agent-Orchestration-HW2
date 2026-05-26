@@ -51,9 +51,9 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] `GoogleProvider` (Gemini) implemented at `src/debate/shared/llm_provider/google_provider.py`
 - [x] `google-generativeai` dep added to `pyproject.toml`
 - [x] Provider registered in `llm_provider/__init__.py`
-- [x] `setup.json.models` default flipped to `gemini-2.5-flash` (Dogs/Cats) + `gemini-2.5-pro` (Judge)
+- [x] `setup.json.models` default flipped to OpenAI `gpt-4o-mini` for Dogs, Cats, and Judge
 - [x] `setup.json.pricing.google` populated for cost tracking
-- [x] `.env.example` updated — GOOGLE_API_KEY required, ANTHROPIC + OPENAI optional
+- [x] `.env.example` updated — OPENAI_API_KEY required, ANTHROPIC + GOOGLE optional
 - [x] 7 unit tests in `tests/unit/test_google_provider.py` (mocked SDK)
 
 ---
@@ -701,7 +701,7 @@ Only Stage 3 is required. Stage 1 is a "Recommended" learning artifact ("underst
 - [x] **Boot-path bug fix:** `DebateSDK.__init__` now calls `load_env(".env")` before any provider construction (was missing — caused "GOOGLE_API_KEY not set" on real-key runs; mocked tests masked it)
 - [x] **Strict-JSON bug fix:** `DebateAgent.handle_your_turn` auto-fills `refers_to_ping` from envelope context when the model omits it (surfaced when switching default to a Gemini flash-lite tier — smaller models drop optional-looking fields; full rationale in `docs/PROMPTS.md` 2026-05-23 entry)
 - [x] **Model upgrade:** default Gemini bumped from `gemini-2.5-flash-lite` to `gemini-3.1-flash-lite` (same pricing tier, newer model family — verified against the partner's other production app)
-- [x] **Provider configuration:** provider abstraction supports Gemini, OpenAI, and Anthropic. Current local `config/setup.json` uses Google `gemini-2.5-flash` for all three agents; earlier OpenAI `gpt-4o-mini` runs remain documented as historical cost evidence.
+- [x] **Provider configuration:** provider abstraction supports Gemini, OpenAI, and Anthropic. Current local `config/setup.json` uses OpenAI `gpt-4o-mini` for all three agents.
 - [x] **Live event stream from menu option 1:** Orchestrator accepts `on_event: Callable[[str, Any], None]` and fires `("ping", Ping)`, `("score", Score)`, `("verdict", Verdict)` events in order. SDK passes the callback through; CLI installs a live printer so the user sees every agent response and every judge score as the debate progresses, not just the final verdict. New tests: `test_orchestrator_on_event_streams_pings_scores_and_verdict`, `test_orchestrator_on_event_none_is_noop`. Suite at 190.
 - [x] **Menu option 5 now interleaves scores:** when reopening a saved `DebateResult` JSON, the per-round judge score block prints under each ping (matches the live option-1 layout).
 - [x] **README Sample Output populated** with real verdict + excerpts from `results/debates/debate_20260522T231025.json` (Cats won 146-139).
@@ -722,7 +722,7 @@ Only Stage 3 is required. Stage 1 is a "Recommended" learning artifact ("underst
 - [x] `uv run ruff check .` passes 0 errors
 - [x] `uv run ruff format --check .` clean (after `ruff format .` applied in Phase 8 sweep)
 - [x] `uv run python -m debate` launches the menu (added missing `src/debate/__main__.py`)
-- [ ] A full debate runs end-to-end without errors — needs real GOOGLE_API_KEY
+- [ ] A full debate runs end-to-end without errors — needs real OPENAI_API_KEY
 - [ ] `results/debates/<timestamp>.json` is produced — same
 - [ ] Verdict declares a non-tie winner — same
 - [ ] Cost report shows < $5 spent — same
