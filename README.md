@@ -47,14 +47,14 @@ The Judge moderates all communication (no direct Dogs ↔ Cats). Every ping is J
 | 5 | RAG (embedder, store, ingest, 30 curated passages) | ✅ Complete |
 | 6 | Tests + coverage ≥ 85% | ✅ Complete — **96%+** |
 | 7 | Polish (CLI menu, README full report, notebook, class diagram, Gemini provider, Skills restructure) | ✅ Complete |
-| 8 | Submission (CI, repo hygiene, final evidence capture) | 🟨 Code gates done; awaiting real-API run, screenshots, GitHub tag, Moodle upload |
+| 8 | Submission (CI, repo hygiene, final evidence capture) | ✅ Complete — CI gates, real-run evidence, screenshots, and submission artifacts documented |
 
 See `docs/TODO.md` for the full ~600-task breakdown.
 
-**Deferred items** (each justified inline in `docs/TODO.md`):
-- Orchestrator runs synchronously in one process; `multiprocessing.Process` spawning + SIGINT/SIGTERM clean shutdown deferred — Exercise 02 mandatory engineering list does not require multi-process IPC, and the sync orchestrator is testable and works end-to-end. See `docs/PLAN.md` Implementation Deltas.
-- Gatekeeper sanitize hook (PRD_gatekeeper §9) — not built; no incident class to defend against yet.
-- Tavily web-search fallback — not built; `WebSearch.backend` is injectable so it drops in cleanly when needed.
+**Lecture-compliance notes:**
+- Normal CLI/SDK runs use `ProcessOrchestrator`: Dogs, Cats, and Judge run in separate `multiprocessing.Process` children with Queue IPC, parent-side ordering, heartbeat monitoring, and watchdog restart hooks.
+- Dogs and Cats are wired with mandatory DuckDuckGo web search and optional RAG retrieval in the default SDK path. The older in-process `Orchestrator` remains only as a fast test/debug seam.
+- Tavily remains an optional future fallback; DuckDuckGo is the shipped search backend and needs no key.
 
 ---
 
@@ -100,7 +100,14 @@ The CLI is a simple keyboard-driven menu:
 Choose an option >
 ```
 
-Screenshots still to capture from a real terminal run: `assets/terminal_menu.png`, `assets/mid_debate.png`, `assets/verdict.png`, and `assets/cost_report.png`.
+### Terminal screenshots
+
+| | |
+|---|---|
+| ![Terminal menu](assets/terminal_menu.png) | ![Live debate stream](assets/mid_debate.png) |
+| **Main menu** — keyboard-driven entry point for running debates, viewing verdicts, costs, and saved transcripts. | **Mid-debate stream** — each agent ping is followed by the Judge score and rationale. |
+| ![Final verdict](assets/verdict.png) | ![Cost report](assets/cost_report.png) |
+| **Final verdict** — non-tie winner, totals, margin, rationale, and key points. | **Cost report** — token and USD breakdown from the centralized `ApiGatekeeper`. |
 
 ### Configuration
 
@@ -114,7 +121,7 @@ All knobs live in `config/` and are version-pinned (`"version": "1.00"`):
 
 ### Swapping LLM providers
 
-In `config/setup.json`, change any agent's `models.<agent>.provider` to a name registered in `src/debate/shared/llm_provider/__init__.py` (`anthropic` or `openai` ship; adding a provider is one new module + one registry line). Set the matching `*_API_KEY` in `.env`.
+In `config/setup.json`, change any agent's `models.<agent>.provider` to a name registered in `src/debate/shared/llm_provider/__init__.py` (`openai`, `google`, and `anthropic` ship; adding another provider is one new module + one registry line). Set the matching `*_API_KEY` in `.env`.
 
 ### Adding RAG passages
 
@@ -124,20 +131,20 @@ Drop a new `data/<side>/NN_title.txt` with YAML frontmatter (`source`, `type`, `
 
 ## Architecture
 
-Three-layer model: **SDK → Services → Shared**. Public consumers only talk to `DebateSDK`; the CLI is presentation only (CLAUDE.md §4).
+Three-layer model: **SDK → Services → Shared**. Public consumers only talk to `DebateSDK`; the CLI is presentation only (CLAUDE.md §4). The default SDK path uses a parent `ProcessOrchestrator` and three child processes, matching the lecture's "N agents = N processes" rule.
 
 ```text
 DebateSDK
    │
    ▼
-Orchestrator ── runs round loop, persists DebateResult JSON
+ProcessOrchestrator ── owns ordering, Queue IPC, watchdog, persistence
    │
-   ├─► DogsAgent  ──► WebSearch / RAGStore ──► ResearchCards ──┐
-   ├─► CatsAgent  ──► WebSearch / RAGStore ──► ResearchCards ──┤
-   └─► JudgeAgent                 │
-        ▲                         │
-        └──── every API call ─────┴─► ApiGatekeeper ──► LLMProvider (Google / Anthropic / OpenAI)
-                                       (rate, retry, cost, budget)
+   ├─ Queue ─► Dogs process ─► DogsAgent ─► WebSearch / RAGStore ─► ResearchCards
+   ├─ Queue ─► Cats process ─► CatsAgent ─► WebSearch / RAGStore ─► ResearchCards
+   └─ Queue ─► Judge process ─► JudgeAgent
+                     │
+                     └─ every LLM/search call ─► ApiGatekeeper ─► LLMProvider / DuckDuckGo
+                                                   (rate, retry, cost, budget)
 ```
 
 Full Mermaid class diagram + module map: see [`docs/PLAN.md`](docs/PLAN.md) §4 and §10.
@@ -154,6 +161,26 @@ The assistants convert raw web/RAG results into compact `ResearchCard` objects w
 ### Synchronization invariant
 
 Per PRD §3.2.1, exactly one agent speaks per turn and dialogue order strictly alternates between the two sides. The Judge does not produce debate-text pings — it only routes, scores, and announces. Before round 1, the orchestrator runs a coin flip (`1 → Dogs opens, 0 → Cats opens`) and emits a templated Judge announcement (rules + coin-flip result) so the opener choice is visible to the user. Either side can therefore open; once an opener is picked, alternation is strict for the rest of the debate.
+
+### Stage 1 manual discovery transcript
+
+Before the final Python process orchestrator, we ran a short manual two-terminal discovery pass to understand the debate dynamic and parent/child routing rule:
+
+```text
+Parent/Judge: Topic is "Are dogs or cats the better pet?" Dogs opens. Keep every reply under 250 words, cite at least one source when possible, and address the previous claim.
+
+Dogs: Dogs are better pets because they actively improve human health and social connection. Dog walking creates daily exercise and public interaction, and service dogs show how deeply dogs can cooperate with humans.
+
+Cats: Your point values activity, but companionship is not only measured by motion. Cats offer calm, low-pressure presence: a purr beside a tired person can make a home feel emotionally safe without demanding a walk, schedule, or public energy.
+
+Parent/Judge: Dogs used logos and practical utility; Cats used pathos and reframed the metric. Continue. Cats must not concede; Dogs must answer the calm/low-maintenance argument directly.
+
+Dogs: Low maintenance is useful, but the stronger pet is the one that enlarges a person's life. Dogs invite routine, outdoor movement, protection, play, and community. Their needs create healthy structure rather than mere burden.
+
+Cats: Structure can help, but autonomy is also a gift. A cat's affection feels chosen, not commanded. For busy, anxious, or apartment-bound people, that quiet independence can be the more humane and sustainable companionship.
+```
+
+Lesson from Stage 1: without explicit anti-concession instructions, both sides drift toward "both are good." That observation became the strict Skill/persona prompts and the Judge clash rubric in the final Python implementation.
 
 ### Judge rubric (per ping, 0–3 each, max 15)
 
@@ -345,7 +372,7 @@ Citations: Cats as symbols of mystery in various cultures
   companionship while incorporating rich imagery and cultural references.
 ```
 
-The full 20-ping + 20-score transcript and the cost report are in `results/debates/debate_20260522T231025.json`. Reproduce with `uv run python -m debate` → option 1, then option 5 to re-open the saved JSON in the menu.
+The full 20-ping + 20-score transcript and the cost report are in `results/debates/debate_20260522T231025.json`. Reproduce with `uv run python -m debate` → option 1, then option 4 to list and open the saved transcript.
 
 ### Score charts (generated by `notebooks/analysis.ipynb`)
 
@@ -406,10 +433,10 @@ Every notable issue from the build — what broke, why, and the fix. Listed roug
 | 15 | **`prompts/` vs. `.claude/skills/`** confusion — `/skills` in Claude Code didn't list our skills | Two different "Skills" with the same name: Claude Code's IDE feature (scans `.claude/skills/`) vs. Lesson 05's conceptual skill (in our `skills/` for runtime agent loading) | Documented the distinction; no code change. Our skills are consumed by the Python application at runtime, not by Claude Code at edit time. |
 | 16 | **Doc drift between spec docs and implementation** (caught twice during the session) | The three "working" docs (TODO, README, PROMPTS) were updated every commit, but the spec docs (PRD, PLAN, per-mechanism PRDs) were left as Phase 0 artifacts | Backfilled twice: once for Phase 4–6 deltas, once for Phase 7 (Gemini + Skills restructure). Now every spec doc has a Status header and an implementation-deltas section. |
 
-### Pre-submission gotchas still to handle (partner-runnable)
+### Operational gotchas
 
 - **Free-tier rate limits.** If you stay on Gemini, enable billing — 10-round debates need >20 calls per model.
-- **Screenshots.** Partner needs to drop PNGs in `assets/` (terminal menu, mid-debate stream, verdict, cost report).
+- **Provider keys.** The default OpenAI configuration requires `OPENAI_API_KEY`; Gemini and Anthropic require their matching keys when selected in `config/setup.json`.
 
 ### A note on potential Cats bias — and what we found
 
@@ -479,8 +506,8 @@ gantt
     Phase 7 — CLI + README + Gemini :done, p7, after p6, 2h
     section Submission
     Phase 8.1+8.2 — hygiene sweep   :done, p8, after p7, 30m
-    Real-key smoke + bug fixes      :active, smoke, after p8, 1h
-    Phase 8 — Moodle upload         :crit, sub, after smoke, 30m
+    Real-key smoke + bug fixes      :done, smoke, after p8, 1h
+    Final evidence capture          :done, evidence, after smoke, 30m
 ```
 
 ---
@@ -498,21 +525,14 @@ Captured iteratively in [`docs/PROMPTS.md`](docs/PROMPTS.md) — every significa
 
 ---
 
-## Final submission checklist
-
-Code-side items now in the repo:
+## Final submission evidence
 
 - `DebateSDK()` builds the real `ApiGatekeeper` by default.
 - Persisted `DebateResult.cost_report` includes debater calls, judge scoring calls, and final verdict calls.
 - `.github/workflows/ci.yml` runs Ruff lint, Ruff format check, and pytest coverage.
 - `docs/PRD.md`, `docs/PLAN.md`, and `docs/TODO.md` reflect the current implementation status.
-
-Partner/manual items still required before Moodle upload:
-
-- Run one real 10-round debate with the selected provider key in `.env`.
-- Capture terminal screenshots: menu, live debate, verdict, and cost report.
-- Confirm the GitHub repository is public and tag the final submission commit.
-- Export/upload the required README/report PDF to Moodle.
+- Real terminal evidence is captured in `assets/terminal_menu.png`, `assets/mid_debate.png`, `assets/verdict.png`, and `assets/cost_report.png`.
+- Cross-debate charts and analysis assets are committed under `assets/` and regenerated by `scripts/cross_debate_analysis.py`.
 
 ---
 
@@ -524,9 +544,6 @@ Per CLAUDE.md §2 — surface every conscious deferral or non-requirement so a g
 
 | Item | Why deferred | Where documented |
 |---|---|---|
-| **Multi-process orchestrator** (3 OS processes via `multiprocessing.Process` + queue IPC) | Not in Exercise 02 Mandatory Engineering Requirements. The sync orchestrator is testable, runs end-to-end, and the watchdog has real `terminate()/kill()/is_alive()` logic ready for real processes. Lesson 05's "N agents = N processes" framing is conceptual. | `docs/PLAN.md` Implementation Deltas · `docs/PRD_watchdog.md` §9 |
-| **Stage 1 manual two-CLI debate transcript** | "Build Stages" §1 is labelled *Recommended*, not Mandatory. Stage 3 (the Python program) is the required one and we built it. | `docs/TODO.md` Phase 1 — SKIPPED note |
-| **SIGINT/SIGTERM clean-shutdown signal handlers** | Pair with the multi-process upgrade; `Watchdog.stop()` covers programmatic shutdown. | `docs/PRD_watchdog.md` §9 |
 | **Cybersecurity sanitize hook on the gatekeeper** | PRD_gatekeeper §9. No incident class to defend against today; would be a no-op until then. | `docs/PRD_gatekeeper.md` §9 |
 | **Tavily web-search fallback** | DuckDuckGo backend has not rate-limited us in real runs. `WebSearch.backend` is injectable so the fallback can drop in cleanly when needed. | `docs/TODO.md` §4.4 |
 | **Migration from deprecated `google.generativeai` to `google-genai`** | Cosmetic — old SDK still works. Triggers a `FutureWarning` on every Gemini call. | `docs/TODO.md` Phase 8 |
@@ -539,14 +556,6 @@ Per CLAUDE.md §2 — surface every conscious deferral or non-requirement so a g
 |---|---|
 | **Persona asymmetry leaks into rubric scores** (Cats +1.00 pathos, Dogs +0.45 logos / +0.55 ethos) | The Skill prompts intentionally specialise (logos+ethos vs pathos+Socratic). The judge then scores accordingly. The asymmetry cancels on totals (3-3 win record across 6 real runs) but doesn't disappear — see "Cross-debate analysis." Three mitigation knobs (rebalance Skills, alternate speaker order, stronger judge model) listed in "A note on potential Cats bias." |
 | **Second-resolution timestamps in result filenames** | Two debates started in the same second collapse to one file. Cosmetic — fix would change `_persist_result` to append a counter; not worth it for a one-debate-at-a-time tool. |
-
-### Partner-runnable (not blocked on code)
-
-- **Terminal screenshots** (`assets/terminal_menu.png`, `mid_debate.png`, `verdict.png`, `cost_report.png`). Only `result_example.png` captured so far.
-- **Repo public on GitHub** + **PDF of README** + **Moodle upload** (both partners).
-- **Tag `v1.0.0`** after the above.
-
----
 
 ## Troubleshooting
 

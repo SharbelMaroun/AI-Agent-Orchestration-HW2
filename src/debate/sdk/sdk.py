@@ -14,10 +14,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from debate.services.agents.cats_agent import CatsAgent
-from debate.services.agents.dogs_agent import DogsAgent
-from debate.services.agents.judge_agent import JudgeAgent
-from debate.services.orchestrator import Orchestrator
+from debate.sdk.sync_runner import run_sync_debate
+from debate.services.process_orchestrator import ProcessOrchestrator
 from debate.shared.config import (
     SetupConfig,
     load_env,
@@ -54,13 +52,19 @@ class DebateSDK:
         results_dir: Path | str = "results/debates",
         provider_factory: Callable[[str], Any] = build_provider,
         dotenv_path: str | Path = ".env",
+        wire_tools: bool = True,
+        use_processes: bool = True,
     ) -> None:
         # Read .env before any provider tries to look up an API key.
         load_env(dotenv_path)
-        self.setup = setup if setup is not None else load_setup(setup_path)
+        self.setup = setup or load_setup(setup_path)
         self.gatekeeper = gatekeeper or self._build_gatekeeper(rate_limits_path, logging_path)
+        self.rate_limits_path = rate_limits_path
+        self.logging_path = logging_path
         self.results_dir = Path(results_dir)
         self.provider_factory = provider_factory
+        self.wire_tools = wire_tools
+        self.use_processes = use_processes
         self._last_result: DebateResult | None = None
 
     def _build_gatekeeper(
@@ -86,36 +90,28 @@ class DebateSDK:
         cfg = self.setup
         if hasattr(self.gatekeeper, "reset_costs"):
             self.gatekeeper.reset_costs()
-        dogs = DogsAgent(
-            provider=self.provider_factory(cfg.models["dogs"].provider),
+        if self.use_processes:
+            kwargs = {
+                "results_dir": self.results_dir,
+                "rate_limits_path": self.rate_limits_path,
+                "logging_path": self.logging_path,
+                "on_event": on_event,
+            }
+            if coin_flip is not None:
+                kwargs["coin_flip"] = coin_flip
+            orch = ProcessOrchestrator(self.setup, **kwargs)
+            self._last_result = orch.run_debate()
+            return self._last_result
+        self._last_result = run_sync_debate(
+            setup=cfg,
             gatekeeper=self.gatekeeper,
-            model_name=cfg.models["dogs"].name,
+            provider_factory=self.provider_factory,
+            results_dir=self.results_dir,
+            topic=topic,
+            on_event=on_event,
+            coin_flip=coin_flip,
+            wire_tools=self.wire_tools,
         )
-        cats = CatsAgent(
-            provider=self.provider_factory(cfg.models["cats"].provider),
-            gatekeeper=self.gatekeeper,
-            model_name=cfg.models["cats"].name,
-        )
-        judge = JudgeAgent(
-            provider=self.provider_factory(cfg.models["judge"].provider),
-            gatekeeper=self.gatekeeper,
-            model_name=cfg.models["judge"].name,
-        )
-        orch_kwargs: dict[str, Any] = {
-            "topic": topic or cfg.topic,
-            "num_rounds": cfg.num_rounds,
-            "results_dir": self.results_dir,
-            "on_event": on_event,
-            "models": cfg.models,
-            "pricing": cfg.pricing,
-            "cost_report_factory": self.gatekeeper.get_token_summary
-            if hasattr(self.gatekeeper, "get_token_summary")
-            else None,
-        }
-        if coin_flip is not None:
-            orch_kwargs["coin_flip"] = coin_flip
-        orch = Orchestrator(**orch_kwargs)
-        self._last_result = orch.run_debate(dogs, cats, judge)
         return self._last_result
 
     def get_last_verdict(self) -> Verdict | None:
@@ -128,9 +124,17 @@ class DebateSDK:
         return Verdict.model_validate(payload["verdict"])
 
     def get_cost_report(self) -> dict:
-        if self._last_result is None:
-            return {}
-        return dict(self._last_result.cost_report)
+        if self._last_result is not None:
+            return dict(self._last_result.cost_report)
+        fallback: dict = {}
+        for path in reversed(self.list_past_debates()):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            report = dict(payload.get("cost_report") or {})
+            if report and not fallback:
+                fallback = report
+            if report.get("by_model"):
+                return report
+        return fallback
 
     def list_past_debates(self) -> list[Path]:
         if not self.results_dir.exists():

@@ -23,7 +23,13 @@ def _build_sdk(tmp_path: Path, factory, num_rounds: int = 2) -> DebateSDK:
     data = setup.model_dump()
     data["num_rounds"] = num_rounds
     setup = type(setup).model_validate(data)
-    return DebateSDK(setup=setup, results_dir=tmp_path, provider_factory=factory)
+    return DebateSDK(
+        setup=setup,
+        results_dir=tmp_path,
+        provider_factory=factory,
+        wire_tools=False,
+        use_processes=False,
+    )
 
 
 def test_full_debate_two_rounds(tmp_path: Path, fake_provider_factory) -> None:
