@@ -71,18 +71,18 @@ The Judge declares a winner based on **persuasive ability**, not factual truth. 
 
 ### 3.2 The Debate Loop
 1. **Setup:** Orchestrator spawns Dogs, Cats, Judge processes. Each loads its system prompt.
-2. **Opening brief:** Orchestrator broadcasts `OPENING_BRIEF` (topic, rules, num_rounds, agent's own side, rubric for Judge). Each agent acknowledges with `READY`.
-3. **Round 1:** Orchestrator signals Dogs with `YOUR_TURN { previous_ping: null }`. Dogs produces ping #1 (opening, no clash required).
-4. **Routing + scoring:** Dogs' ping goes to Judge. Judge scores it. Judge forwards it to Cats as the next `YOUR_TURN { previous_ping: <Dogs ping #1> }`.
-5. Cats produces ping #1 (must clash with Dogs #1). Judge scores. Forwards to Dogs as `YOUR_TURN { previous_ping: <Cats ping #1> }`.
+2. **Opening brief:** Orchestrator broadcasts `OPENING_BRIEF` (topic, rules, num_rounds, agent's own side, rubric for Judge).
+3. **Round 1:** Orchestrator flips a coin for Dogs/Cats opener, then signals the opener with `YOUR_TURN { previous_ping: null }`.
+4. **Routing + scoring:** The opener's ping goes to Judge. Judge scores it. The opponent receives `YOUR_TURN { previous_ping: <opener ping> }`.
+5. The second side produces ping #1 (must clash with opener #1). Judge scores. The next round continues in the same alternating order.
 6. Repeat steps 3–5 until **10 rounds × 2 sides = 20 pings** complete.
 7. **Verdict:** Judge synthesizes all scores, identifies key points per side, writes rationale, declares winner. Emits `VERDICT` to Orchestrator. Orchestrator persists `DebateResult` JSON.
 
 ### 3.2.1 Synchronization Invariant
 - **Exactly one agent is active at any moment.** The other two block on `queue.get()`.
 - Agents cannot speak out of turn — they must receive a `YOUR_TURN` message before producing a ping.
-- **Dogs always opens** (round 1, ping #1). This is fixed in the orchestrator, not configurable.
-- The dialogue order from the transcript reader's perspective is strictly **Dogs → Cats → Dogs → Cats → … → Dogs → Cats**. The Judge does not produce debate text — it only routes and scores between pings.
+- **Opening side is coin-flipped** (`1 → Dogs`, `0 → Cats`) and announced before round 1.
+- The dialogue order from the transcript reader's perspective is strictly alternating once the opener is chosen. The Judge does not produce debate text — it only routes and scores between pings.
 - All inter-process messages flow through the Orchestrator + Judge. **No direct Dogs ↔ Cats communication.** (Lesson 05 §8 rule #7.)
 
 ### 3.2.2 Agent Memory Model
@@ -168,7 +168,7 @@ Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A commit
 - `openai` — OpenAI provider (default; install via `uv sync --extra openai`)
 - `chromadb` — vector store
 - `sentence-transformers` — embeddings
-- `duckduckgo-search` — web search
+- `ddgs` — DuckDuckGo web search
 - `pydantic` — JSON schema validation + `LLMProvider` types
 - `python-dotenv` — env var loading
 - `rich` — CLI menu rendering
@@ -199,10 +199,10 @@ PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md
 |---|---|---|---|
 | 0 | Docs (this PRD + PLAN + per-mechanism PRDs + TODO + PROMPTS) | TODO Phase 0 | ✅ Complete |
 | 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | TODO Phase 2 + 3 | ✅ Complete |
-| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (real SDK gatekeeper default; 95.78% coverage) |
-| 4 | Add RAG to Pro and Con | TODO Phase 5 | ✅ Complete (30 curated passages, ChromaDB persistent) |
-| 5 | Polish: terminal menu, README, analysis notebook, cost report | TODO Phase 7 | ✅ Complete except final real-run evidence capture |
-| 6 | Submission: CI, pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | 🟨 Code gates complete; screenshots, tag, and Moodle upload remain |
+| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (real SDK gatekeeper default; 92%+ coverage) |
+| 4 | Add RAG + web search to Pro and Con | TODO Phase 5 | ✅ Complete (default SDK path wires DuckDuckGo + ChromaDB RAG) |
+| 5 | Polish: terminal menu, README, analysis notebook, cost report | TODO Phase 7 | ✅ Complete; final process-mode real-run evidence captured |
+| 6 | Submission: CI, pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ✅ Code gates, screenshots, docs, and evidence captured; Moodle upload remains the partner/admin step |
 
 ---
 

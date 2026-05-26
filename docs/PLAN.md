@@ -2,15 +2,15 @@
 
 **Version:** 1.00 · **Status:** Approved (ADRs final; implementation deltas noted inline below) · References: `docs/PRD.md`
 
-> **Implementation deltas vs. this PLAN (as of Phase 7 close):**
+> **Implementation deltas vs. this PLAN (as of Phase 8 compliance pass):**
 > - `LLMProvider` registry ships **three** providers, not two: `openai` (default), `google` (Gemini), and `anthropic`. `setup.json.models` currently defaults all three agents to `gpt-4o-mini`.
 > - Per-agent system prompts moved from `prompts/<side>_system_prompt.md` (flat files) to `skills/<side>/SKILL.md` (directories with YAML frontmatter) per Lesson 05 §5. `src/debate/shared/skill_loader.py` parses the new shape.
 > - The terminal-menu CLI (`src/debate/main.py`) is implemented; `DebateSDK` is its sole dependency.
-> - The architecture details below remain accurate; only file paths and provider list changed.
+> - Default SDK/CLI runs now use `ProcessOrchestrator`: Dogs, Cats, and Judge run as three `multiprocessing.Process` children with Queue IPC, heartbeat messages, and parent-side watchdog supervision. The older in-process `Orchestrator` remains only for fast tests and debugging.
+> - `DebateSDK` wires Dogs/Cats with `WebSearch` and `RAGStore` by default, so the normal CLI path uses the mandatory internet-search tool.
 >
 > **Earlier implementation deltas (Phase 4–6):**
 > - `ApiGatekeeper` is implemented as three sibling modules under `src/debate/shared/` (`gatekeeper.py` — the policy class, `rate_limiter.py` — `RollingWindow`/`ServiceState`/`is_retryable`/exceptions/`QueueStatus`, and `pricing.py` — `compute_cost`/`CostTracker`). The split exists to keep `gatekeeper.py` ≤ 150 LOC per CLAUDE.md §4; the public contract is unchanged.
-> - `Orchestrator` runs synchronously in a single process. `multiprocessing.Process` spawning, SIGINT/SIGTERM handling, and the heartbeat queue are deferred — Lesson 05's "N agents = N OS processes" framing is conceptual, not a mandatory Exercise 02 engineering requirement. The sync orchestrator is testable and runs end-to-end; the multi-process upgrade is a wrapper, not a rewrite. See PRD_watchdog §9.
 > - `RAGStore.add` substitutes `{"_":"_"}` for empty metadata dicts (ChromaDB rejects `{}`). Documented in `PRD_rag.md` §3.1.
 > - `DebateSDK` now builds the real config-driven `ApiGatekeeper` by default. Tests can still inject lightweight gatekeepers through the constructor.
 
@@ -315,9 +315,9 @@ DebateSDK  (sole public entry)
 **Alternatives considered:** `subprocess` spawning `claude` CLI per agent — more authentic to the lecture's mental model but harder to test, harder to capture costs, fragile on Windows.
 **Trade-off:** We use the Anthropic Python SDK directly inside each child process instead of running Claude CLI. The conceptual structure (3 processes + IPC) is preserved.
 
-### ADR-002: LLM provider — default Anthropic, abstraction allows any
-**Decision:** Default to Anthropic Claude via the `anthropic` Python SDK, but route every call through the `LLMProvider` abstraction (ADR-009). Provider per agent is configurable in `config/setup.json.models.<side>.provider`.
-**Rationale:** Anthropic's SDK has clean token-usage reporting (`response.usage.*`) and native prompt caching support. But we don't lock in — the same code works with OpenAI, Google, or any future provider once a `LLMProvider` subclass is added.
+### ADR-002: LLM provider — default OpenAI, abstraction allows any
+**Decision:** Default to OpenAI `gpt-4o-mini`, but route every call through the `LLMProvider` abstraction (ADR-009). Provider per agent is configurable in `config/setup.json.models.<side>.provider`.
+**Rationale:** `gpt-4o-mini` has stable low-cost API access for full 10-round debates. The same code works with Anthropic, Google, or any future provider once a `LLMProvider` subclass is added.
 **Default models:** `claude-haiku-4-5-20251001` for Dogs and Cats (cheap, fast, sufficient for rhetoric) and `claude-sonnet-4-6` for Judge (more careful evaluation). Both configurable.
 
 ### ADR-003: Vector store — ChromaDB
@@ -338,8 +338,8 @@ DebateSDK  (sole public entry)
 **Decision:** Wrap stdlib `logging.handlers.RotatingFileHandler` with a custom subclass that enforces N files × M lines from `config/logging_config.json`.
 **Rationale:** Matches the lecture's "20 files × 500 lines" example, leverages stdlib.
 
-### ADR-007: Web search provider — DuckDuckGo via `duckduckgo-search`
-**Decision:** Use `duckduckgo-search` Python package — free, no API key needed.
+### ADR-007: Web search provider — DuckDuckGo via `ddgs`
+**Decision:** Use the `ddgs` Python package — free, no API key needed.
 **Rationale:** Avoids extra paid API setup. Throttled by Gatekeeper.
 **Fallback:** Tavily free tier if DDG becomes unreliable.
 
@@ -493,7 +493,7 @@ Single-machine: parent Python process forks 3 children (Pro, Con, Judge). Each c
 The Judge is the parent's direct child but does **not** spawn Pro/Con — the Orchestrator (in the main process) spawns all three.
 
 ## 9. Open Questions — Resolved
-1. **Web search package** — Resolved: `duckduckgo-search` selected (Phase 4.4). `WebSearch.backend` is injectable so a Tavily fallback can drop in later behind a feature flag if DDG rate-limits us during real runs; not built yet.
+1. **Web search package** — Resolved: `ddgs` selected (Phase 4.4, migrated from renamed `duckduckgo-search`). `WebSearch.backend` is injectable so a Tavily fallback can drop in later behind a feature flag if DDG rate-limits us during real runs; not built yet.
 2. **RAG corpus assembly** — Resolved: manual curation. 15 hand-picked passages per side, max 196 words each, with YAML frontmatter. Files committed under `data/dogs/*.txt` and `data/cats/*.txt`.
 3. **Pair partner's role** — Resolved out-of-band: we agreed on a split — one of us owns the implementation pipeline; the other owns Phase 7 polish artifacts (screenshots, cost analysis table review).
 

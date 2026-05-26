@@ -60,10 +60,12 @@ def test_full_debate_with_real_rag(tmp_path: Path, fake_provider_factory, hash_e
         setup=setup,
         results_dir=tmp_path / "out",
         provider_factory=fake_provider_factory,
+        wire_tools=False,
+        use_processes=False,
     )
 
-    # The SDK's default run_debate doesn't yet wire RAG (Phase 5.6 marker note).
-    # We construct the orchestrator directly so this test pins the RAG seam.
+    # This test constructs the orchestrator directly to use the tiny seeded
+    # Chroma stores instead of the default data/<side>/chroma runtime stores.
     dogs = DogsAgent(
         provider=fake_provider_factory("anthropic"),
         gatekeeper=sdk.gatekeeper,

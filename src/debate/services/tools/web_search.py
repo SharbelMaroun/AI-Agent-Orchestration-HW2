@@ -1,6 +1,6 @@
 """Web search tool — DuckDuckGo backend, throttled by ApiGatekeeper.
 
-The agent never calls duckduckgo_search directly; it always goes through
+The agent never calls the DuckDuckGo client directly; it always goes through
 `gatekeeper.execute(WebSearch.search, ...)` so the search service shares the
 same rate-limit + retry plumbing as LLM calls (PRD §5 + PRD_gatekeeper.md).
 """
@@ -28,20 +28,20 @@ class GatekeeperLike(Protocol):
 
 
 class DDGBackend:
-    """Thin wrapper over duckduckgo_search.DDGS, kept tiny for testability."""
+    """Thin wrapper over ddgs.DDGS, kept tiny for testability."""
 
     def __init__(self, timeout: int) -> None:
         self.timeout = timeout
 
     def query(self, query: str, max_results: int) -> list[dict]:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
 
         with DDGS(timeout=self.timeout) as client:
             return list(client.text(query, max_results=max_results))
 
 
 class WebSearch:
-    """Search API. Default backend is DuckDuckGo via `duckduckgo_search`.
+    """Search API. Default backend is DuckDuckGo via `ddgs`.
 
     Pass a fake `backend` (any object with `.query(query, max_results) -> list[dict]`)
     in tests to avoid the network entirely.

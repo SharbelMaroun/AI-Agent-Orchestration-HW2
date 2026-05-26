@@ -1,7 +1,7 @@
 # PRD — Watchdog
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Required by Lesson 05 ("Watchdog with keep-alive").
-**Status:** Implemented Phase 4.2 with one deferred sub-item — see §9 below.
+**Status:** Implemented. The default SDK path runs three child processes through `ProcessOrchestrator`; watchdog registration, heartbeats, termination, and restart hooks are active in that path.
 
 ---
 
@@ -69,5 +69,6 @@ After `max_restarts_per_agent` exceeded → log `AGENT_DEAD`, raise `WatchdogFat
 - Watchdog runs as a daemon **thread** in the parent process. ✅ implemented (`Watchdog._loop`).
 - Uses `threading.Lock` around the `_entries` dict (renamed from `last_seen` in implementation — entries now hold `last_seen` + `restart_count` + `restart_fn` + `process` + `fatal` flag). ✅ implemented.
 - Heartbeats during LLM calls: defaulted to option 1 (raise `kill_after_seconds` above the longest expected LLM call). Configured via `setup.json.timeouts.watchdog_kill_after_seconds = 90`. ✅ honored.
-- **Deferred:** SIGINT/SIGTERM clean-shutdown signal handling. The orchestrator currently runs synchronously in one process (no child processes yet), so the watchdog's `stop()` is invoked programmatically rather than via a signal handler. The signal-handler wiring lands together with the orchestrator's multi-process upgrade (TODO §4.2 deferred item).
+- `ProcessRuntime` registers Dogs, Cats, and Judge child processes with restart factories. Child workers emit `Heartbeat` envelopes through a heartbeat queue while waiting for work. ✅ implemented.
+- Shutdown is programmatic: the parent sends a `None` sentinel, collects child cost summaries, then calls `Watchdog.stop()` to clean up any still-live processes. ✅ implemented.
 - **Beyond spec:** `Watchdog.check_once()` is exposed publicly so tests can drive the timeout-detection logic without spinning up the daemon thread. The loop is `while not stop: check_once(); sleep(poll)` — the unit-of-work seam used the same pattern as the gatekeeper's `sleep_fn` injection.
