@@ -56,6 +56,14 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] `.env.example` updated — OPENAI_API_KEY required, ANTHROPIC + GOOGLE optional
 - [x] 7 unit tests in `tests/unit/test_google_provider.py` (mocked SDK)
 
+### 7.8 Deterministic research assistants ✅
+- [x] Added `src/debate/services/research/` with `ResearchAssistant` and `ResearchCard`
+- [x] Dogs research assistants: health/longevity, utility/work, loyalty/bonding
+- [x] Cats research assistants: wellbeing/calm, culture/literature, practicality/independence
+- [x] `DebateAgent._collect_evidence()` now converts raw web/RAG evidence into `research_cards`
+- [x] Debater prompt includes research cards so the final ping can target the Judge rubric
+- [x] Added `tests/unit/test_researcher.py` plus DebateAgent prompt/evidence assertions
+
 ---
 
 ## Phase 0 — Documentation & Design (currently 🟨)

@@ -28,12 +28,29 @@ def test_collect_evidence_calls_both_tools():
     ev = a._collect_evidence("dogs research")
     rag.retrieve.assert_called_once_with("dogs research", k=3)
     search.search.assert_called_once_with("dogs research", max_results=5)
-    assert ev == {"search": [{"title": "t"}], "rag": ["passage-1"]}
+    assert ev["search"] == [{"title": "t"}]
+    assert ev["rag"] == ["passage-1"]
+    assert len(ev["research_cards"]) == 3
 
 
 def test_collect_evidence_works_without_tools():
     a = agent()
-    assert a._collect_evidence("anything") == {"search": [], "rag": []}
+    ev = a._collect_evidence("anything")
+    assert ev["search"] == []
+    assert ev["rag"] == []
+    assert len(ev["research_cards"]) == 3
+
+
+def test_build_user_prompt_includes_research_cards():
+    a = agent()
+    evidence = {
+        "search": [],
+        "rag": [],
+        "research_cards": [{"assistant": "DogsHealthResearcher", "claim": "health"}],
+    }
+    prompt = a._build_user_prompt(None, evidence, 1)
+    assert "Research assistant cards" in prompt
+    assert "DogsHealthResearcher" in prompt
 
 
 def test_parse_ping_valid_json():

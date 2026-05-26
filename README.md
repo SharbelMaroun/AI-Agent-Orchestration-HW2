@@ -30,8 +30,8 @@ Run `uv sync --extra openai`, copy `.env.example` to `.env`, add `OPENAI_API_KEY
 
 | Agent | Role | Style | Tools |
 |---|---|---|---|
-| **DogsAgent** | Argues dogs are the better pet | logos + ethos (studies, authority, statistics) | DuckDuckGo search, RAG corpus of 15 evidence-heavy passages |
-| **CatsAgent** | Argues cats are the better pet | pathos + Socratic (vivid imagery, reframing) | DuckDuckGo search, RAG corpus of 15 literary/philosophical passages |
+| **DogsAgent** | Argues dogs are the better pet | logos + ethos (studies, authority, statistics) | DuckDuckGo search, RAG corpus, 3 deterministic research assistants |
+| **CatsAgent** | Argues cats are the better pet | pathos + Socratic (vivid imagery, reframing) | DuckDuckGo search, RAG corpus, 3 deterministic research assistants |
 | **JudgeAgent** | Scores every ping, declares a non-tie winner | neutral, 5-dimension Toulmin/Aristotle rubric | none |
 
 The Judge moderates all communication (no direct Dogs ↔ Cats). Every ping is JSON-validated, scored 0–3 across five dimensions (Structure, Logos, Pathos, Ethos, Clash), and the final verdict resolves any tie via a clash-then-pathos cascade. All LLM, search, and embedding calls funnel through a single `ApiGatekeeper` that enforces rate limits, retries with backoff, tracks token cost, and alerts on budget thresholds.
@@ -132,8 +132,8 @@ DebateSDK
    ▼
 Orchestrator ── runs round loop, persists DebateResult JSON
    │
-   ├─► DogsAgent  ──► WebSearch ──┐
-   ├─► CatsAgent  ──► RAGStore ──┤
+   ├─► DogsAgent  ──► WebSearch / RAGStore ──► ResearchCards ──┐
+   ├─► CatsAgent  ──► WebSearch / RAGStore ──► ResearchCards ──┤
    └─► JudgeAgent                 │
         ▲                         │
         └──── every API call ─────┴─► ApiGatekeeper ──► LLMProvider (Google / Anthropic / OpenAI)
@@ -141,6 +141,15 @@ Orchestrator ── runs round loop, persists DebateResult JSON
 ```
 
 Full Mermaid class diagram + module map: see [`docs/PLAN.md`](docs/PLAN.md) §4 and §10.
+
+### Research assistants
+
+Each speaking agent now uses three deterministic research assistants before writing a ping. They are implemented as tool-style modules, not extra LLM agents, so they improve evidence selection without multiplying API calls:
+
+- Dogs: health/longevity, utility/work, loyalty/bonding.
+- Cats: wellbeing/calm, culture/literature, practicality/independence.
+
+The assistants convert raw web/RAG results into compact `ResearchCard` objects with `claim`, `evidence`, `judge_angle`, and `citation`, then the main debater LLM chooses the strongest material for the Judge rubric.
 
 ### Synchronization invariant
 

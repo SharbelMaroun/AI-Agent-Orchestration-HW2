@@ -19,6 +19,7 @@ from debate.services.agents._debate_agent_helpers import (
     validate_clash,
 )
 from debate.services.agents.base_agent import BaseAgent
+from debate.services.research import build_research_cards
 from debate.shared.schemas import OpeningBrief, Ping, Side, YourTurn
 
 
@@ -63,7 +64,7 @@ class DebateAgent(BaseAgent):
 
     def _collect_evidence(self, query: str) -> dict[str, list]:
         """Gather web-search hits + RAG passages. Either tool may be absent."""
-        evidence: dict[str, list] = {"search": [], "rag": []}
+        evidence: dict[str, list] = {"search": [], "rag": [], "research_cards": []}
         if self.search_tool is not None:
             evidence["search"] = self.search_tool.search(
                 query,
@@ -71,6 +72,9 @@ class DebateAgent(BaseAgent):
             )
         if self.rag is not None:
             evidence["rag"] = self.rag.retrieve(query, k=self.rag_k)
+        evidence["research_cards"] = [
+            card.model_dump() for card in build_research_cards(self.side, evidence)
+        ]
         return evidence
 
     def _build_user_prompt(

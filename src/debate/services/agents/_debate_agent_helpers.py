@@ -69,8 +69,10 @@ def build_user_prompt(
     return (
         f"Round {round_}. You are arguing for the side: {side}.\n"
         f"{prior}\n"
+        f"Research assistant cards: {evidence.get('research_cards', [])}\n"
         f"Web search evidence: {evidence['search']}\n"
         f"RAG passages: {evidence['rag']}\n\n"
+        "Prefer the strongest research cards for the Judge's rubric. "
         "Respond with ONE JSON object matching the Ping schema. "
         "If this is round 2+, set `refers_to_ping` to the opponent's round."
     )

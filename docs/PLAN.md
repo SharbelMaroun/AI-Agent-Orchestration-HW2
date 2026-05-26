@@ -179,6 +179,16 @@ classDiagram
     class WebSearch {
         +search(query, max_results) list~SearchResult~
     }
+    class ResearchAssistant {
+        +build_card(evidence) ResearchCard
+    }
+    class ResearchCard {
+        +assistant str
+        +claim str
+        +evidence str
+        +judge_angle str
+        +citation str
+    }
     class Orchestrator {
         +run_debate(dogs, cats, judge) DebateResult
     }
@@ -205,6 +215,8 @@ classDiagram
     BaseAgent ..> LLMProvider : owns
     DebateAgent ..> RAGStore : queries
     DebateAgent ..> WebSearch : queries
+    DebateAgent ..> ResearchAssistant : builds cards
+    ResearchAssistant ..> ResearchCard : returns
     WebSearch ..> ApiGatekeeper : routes via execute(service="search")
     RAGStore ..> Embedder : embeds
     ApiGatekeeper *-- CostTracker : owns
