@@ -338,8 +338,8 @@ DebateSDK  (sole public entry)
 **Decision:** Wrap stdlib `logging.handlers.RotatingFileHandler` with a custom subclass that enforces N files × M lines from `config/logging_config.json`.
 **Rationale:** Matches the lecture's "20 files × 500 lines" example, leverages stdlib.
 
-### ADR-007: Web search provider — DuckDuckGo via `duckduckgo-search`
-**Decision:** Use `duckduckgo-search` Python package — free, no API key needed.
+### ADR-007: Web search provider — DuckDuckGo via `ddgs`
+**Decision:** Use the `ddgs` Python package — free, no API key needed.
 **Rationale:** Avoids extra paid API setup. Throttled by Gatekeeper.
 **Fallback:** Tavily free tier if DDG becomes unreliable.
 
@@ -493,7 +493,7 @@ Single-machine: parent Python process forks 3 children (Pro, Con, Judge). Each c
 The Judge is the parent's direct child but does **not** spawn Pro/Con — the Orchestrator (in the main process) spawns all three.
 
 ## 9. Open Questions — Resolved
-1. **Web search package** — Resolved: `duckduckgo-search` selected (Phase 4.4). `WebSearch.backend` is injectable so a Tavily fallback can drop in later behind a feature flag if DDG rate-limits us during real runs; not built yet.
+1. **Web search package** — Resolved: `ddgs` selected (Phase 4.4, migrated from renamed `duckduckgo-search`). `WebSearch.backend` is injectable so a Tavily fallback can drop in later behind a feature flag if DDG rate-limits us during real runs; not built yet.
 2. **RAG corpus assembly** — Resolved: manual curation. 15 hand-picked passages per side, max 196 words each, with YAML frontmatter. Files committed under `data/dogs/*.txt` and `data/cats/*.txt`.
 3. **Pair partner's role** — Resolved out-of-band: we agreed on a split — one of us owns the implementation pipeline; the other owns Phase 7 polish artifacts (screenshots, cost analysis table review).
 

@@ -168,7 +168,7 @@ Secrets are loaded from a `.env` file (gitignored) via `python-dotenv`. A commit
 - `openai` — OpenAI provider (default; install via `uv sync --extra openai`)
 - `chromadb` — vector store
 - `sentence-transformers` — embeddings
-- `duckduckgo-search` — web search
+- `ddgs` — DuckDuckGo web search
 - `pydantic` — JSON schema validation + `LLMProvider` types
 - `python-dotenv` — env var loading
 - `rich` — CLI menu rendering

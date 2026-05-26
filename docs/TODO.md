@@ -147,7 +147,7 @@ Stage 1 is documented in `README.md` under "Stage 1 manual discovery transcript.
 - [x] Add core deps: anthropic, pydantic, python-dotenv
 - [x] Add provider dep (optional): openai
 - [x] Add data deps: chromadb, sentence-transformers
-- [x] Add tool deps: duckduckgo-search
+- [x] Add tool deps: ddgs
 - [x] Add dev deps: pytest, pytest-cov, ruff
 - [x] Add `[tool.ruff]` config: line-length=100, target-version=py310
 - [x] Add `[tool.ruff.lint]` select + ignore (per CLAUDE.md §7)
@@ -455,7 +455,7 @@ Stage 1 is documented in `README.md` under "Stage 1 manual discovery transcript.
 - [x] Class `WebSearch(gatekeeper, backend=None, timeout_seconds, logger)`
 - [x] Method: `search(query, max_results=5) -> list[SearchResult]`
 - [x] Define `SearchResult` Pydantic model (title, url, snippet)
-- [x] DuckDuckGo backend implementation (`DDGBackend` using `duckduckgo_search.DDGS`)
+- [x] DuckDuckGo backend implementation (`DDGBackend` using `ddgs.DDGS`)
 - [ ] Tavily fallback implementation (behind feature flag) — deferred; not needed unless DDG rate-limits us during real runs
 - [x] Route through `gatekeeper.execute(..., service="search")`
 - [x] Timeout per request from config (passed into `DDGBackend(timeout=...)`)
