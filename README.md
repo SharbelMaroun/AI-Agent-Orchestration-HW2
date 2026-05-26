@@ -22,7 +22,7 @@ Three AI agents — **Dogs** (logos + ethos), **Cats** (pathos + Socratic), and 
 
 ## TL;DR
 
-Run `uv sync --extra openai`, copy `.env.example` to `.env` and add `OPENAI_API_KEY=...` (or `GOOGLE_API_KEY=...` to use Gemini instead — change `config/setup.json.models` accordingly), then `uv run python -m debate`. Choose option 1 from the menu and a full 10-round debate runs end-to-end, producing a JSON transcript under `results/debates/` and a winner declared by the Judge. **188 tests · 96%+ coverage · ruff 0 violations · format check clean.**
+Run `uv sync`, copy `.env.example` to `.env`, add `GOOGLE_API_KEY=...` (the current `config/setup.json` default is Gemini), then `uv run python -m debate`. Choose option 1 from the menu and a full 10-round debate runs end-to-end, producing a JSON transcript under `results/debates/` and a winner declared by the Judge. The quality gates are automated in `.github/workflows/ci.yml`: pytest coverage, Ruff lint, and Ruff format check.
 
 ---
 
@@ -45,9 +45,9 @@ The Judge moderates all communication (no direct Dogs ↔ Cats). Every ping is J
 | 3 | Core code (schemas, providers, agents, orchestrator, SDK) | ✅ Complete |
 | 4 | Engineering (gatekeeper, watchdog, logger, search) | ✅ Complete |
 | 5 | RAG (embedder, store, ingest, 30 curated passages) | ✅ Complete |
-| 6 | Tests + coverage ≥ 85% | ✅ Complete — **96.08%** (187 tests) |
+| 6 | Tests + coverage ≥ 85% | ✅ Complete — **96%+** |
 | 7 | Polish (CLI menu, README full report, notebook, class diagram, Gemini provider, Skills restructure) | ✅ Complete |
-| 8 | Submission (8.1 integration check ✅, 8.2 repo hygiene ✅) | 🟨 Automated checks done; awaiting real-API run + Moodle upload |
+| 8 | Submission (CI, repo hygiene, final evidence capture) | 🟨 Code gates done; awaiting real-API run, screenshots, GitHub tag, Moodle upload |
 
 See `docs/TODO.md` for the full ~600-task breakdown.
 
@@ -101,7 +101,7 @@ The CLI is a simple keyboard-driven menu:
 Choose an option >
 ```
 
-Screenshots — partner deliverable; will be added under `assets/` (terminal menu, mid-debate, verdict, cost report) and linked here once captured.
+Screenshots still to capture from a real terminal run: `assets/terminal_menu.png`, `assets/mid_debate.png`, `assets/verdict.png`, and `assets/cost_report.png`.
 
 ### Configuration
 
@@ -178,8 +178,8 @@ Current state (Phase 7 close):
 
 | Metric | Threshold (CLAUDE.md) | Actual |
 |---|---|---|
-| Test count | — | **220** (194 prior + 26 new for `cost_recorder`, `rate_limiter`, `skill_loader`) |
-| Coverage | ≥ 85% | **96%+** |
+| Test count | — | **221** |
+| Coverage | ≥ 85% | **95.78%** |
 | Ruff violations | 0 | **0** (`check` + `format --check` both clean) |
 | File LOC | ≤ 150 (code lines) | ✅ All under cap by *both* the literal "excludes blanks + comments" reading AND the strict raw-line count. Largest raw: `test_base_agent.py` at 148. |
 | Secrets in repo | 0 | `.env` gitignored; only `.env.example` committed |
@@ -205,7 +205,7 @@ Pricing per model (USD per million tokens, list prices as of submission — veri
 | Anthropic | `claude-sonnet-4-6` | 3.00 | 15.00 |
 | Anthropic | `claude-opus-4-7` | 15.00 | 75.00 |
 
-Default config uses `gpt-4o-mini` (OpenAI) for all three agents — roughly $0.01–$0.02 for a full 10-round debate at list prices. To switch providers, edit `config/setup.json.models` (each agent independently) and set the matching `*_API_KEY` in `.env`. Available registered providers: `openai`, `google` (Gemini), `anthropic`. Budget cap = $5.00 (`budget_usd`); the gatekeeper logs a WARNING at 80% and raises `BudgetExceededError` at 100%.
+Default config uses `gemini-2.5-flash` (Google) for all three agents. To switch providers, edit `config/setup.json.models` (each agent independently) and set the matching `*_API_KEY` in `.env`. Available registered providers: `openai`, `google` (Gemini), `anthropic`. Budget cap = $5.00 (`budget_usd`); the gatekeeper logs a WARNING at 80% and raises `BudgetExceededError` at 100%.
 
 **Optimization strategies in this project:**
 1. **Prompt caching** — Anthropic provider marks the system prompt and first messages with `cache_control: { type: "ephemeral" }` (PRD_gatekeeper §9a). Cache reads cost 10% of base input price; the cost report exposes `cache_read_pct`.
@@ -214,7 +214,7 @@ Default config uses `gpt-4o-mini` (OpenAI) for all three agents — roughly $0.0
 
 ### Cost table — Table 4 (6 real debates on `gpt-4o-mini`)
 
-Each row aggregates per-ping token counts from one persisted `DebateResult` (agent LLM calls only; judge scoring/verdict calls happen inside the orchestrator and are not yet broken out in the saved JSON — `_build_cost_report` covers agent-side cost).
+Each row aggregates token counts from persisted `DebateResult.cost_report`. Current SDK runs use the real `ApiGatekeeper` by default, so the saved report includes debater calls, judge scoring calls, and the final judge verdict call.
 
 | # | File | Winner | Dogs | Cats | Margin | Dogs in/out tok | Cats in/out tok |
 |---|---|---|---:|---:|---:|---|---|
@@ -490,6 +490,24 @@ Captured iteratively in [`docs/PROMPTS.md`](docs/PROMPTS.md) — every significa
 
 ---
 
+## Final submission checklist
+
+Code-side items now in the repo:
+
+- `DebateSDK()` builds the real `ApiGatekeeper` by default.
+- Persisted `DebateResult.cost_report` includes debater calls, judge scoring calls, and final verdict calls.
+- `.github/workflows/ci.yml` runs Ruff lint, Ruff format check, and pytest coverage.
+- `docs/PRD.md`, `docs/PLAN.md`, and `docs/TODO.md` reflect the current implementation status.
+
+Partner/manual items still required before Moodle upload:
+
+- Run one real 10-round debate with the selected provider key in `.env`.
+- Capture terminal screenshots: menu, live debate, verdict, and cost report.
+- Confirm the GitHub repository is public and tag the final submission commit.
+- Export/upload the required README/report PDF to Moodle.
+
+---
+
 ## Known limitations & out-of-scope
 
 Per CLAUDE.md §2 — surface every conscious deferral or non-requirement so a grader doesn't have to guess.
@@ -504,7 +522,6 @@ Per CLAUDE.md §2 — surface every conscious deferral or non-requirement so a g
 | **Cybersecurity sanitize hook on the gatekeeper** | PRD_gatekeeper §9. No incident class to defend against today; would be a no-op until then. | `docs/PRD_gatekeeper.md` §9 |
 | **Tavily web-search fallback** | DuckDuckGo backend has not rate-limited us in real runs. `WebSearch.backend` is injectable so the fallback can drop in cleanly when needed. | `docs/TODO.md` §4.4 |
 | **Migration from deprecated `google.generativeai` to `google-genai`** | Cosmetic — old SDK still works. Triggers a `FutureWarning` on every Gemini call. | `docs/TODO.md` Phase 8 |
-| **Judge token costs in the persisted `cost_report`** | Pings only carry agent token counts; judge scoring + verdict calls go through the gatekeeper but their token counts aren't in the saved JSON. Cost report is therefore a *lower bound*. | `docs/TODO.md` cost-report bug fix entry |
 | **Cost forecasting** (predict future spend) | We have WARN at 80% and `BudgetExceededError` at 100% — sufficient for a 10-round debate. Forecasting is over-engineering. | This section |
 | **Multi-judge ensembles, multi-topic, multimodal inputs** | PRD §5.4 out-of-scope. | `docs/PRD.md` §5.4 |
 

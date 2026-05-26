@@ -58,9 +58,12 @@ def get_logger(name: str, config: LoggingConfig | None = None) -> logging.Logger
 def get_cost_logger(config: LoggingConfig) -> logging.Logger:
     """Return a JSONL-only logger for cost entries. Idempotent."""
     logger = logging.getLogger("debate.cost")
-    if logger.handlers:
-        return logger
     path = Path(config.cost_log.path)
+    if logger.handlers and _has_file_handler(logger, path):
+        return logger
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        handler.close()
     path.parent.mkdir(parents=True, exist_ok=True)
     handler = logging.FileHandler(path, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(message)s"))
@@ -68,6 +71,17 @@ def get_cost_logger(config: LoggingConfig) -> logging.Logger:
     logger.setLevel(logging.INFO)
     logger.propagate = False
     return logger
+
+
+def _has_file_handler(logger: logging.Logger, path: Path) -> bool:
+    target = path.resolve()
+    for handler in logger.handlers:
+        if (
+            isinstance(handler, logging.FileHandler)
+            and Path(handler.baseFilename).resolve() == target
+        ):
+            return True
+    return False
 
 
 def log_cost_entry(logger: logging.Logger, entry: dict) -> None:

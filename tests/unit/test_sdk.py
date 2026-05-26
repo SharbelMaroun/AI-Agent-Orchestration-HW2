@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 from debate.sdk.sdk import DebateSDK
 from debate.shared.config import load_setup
+from debate.shared.gatekeeper import ApiGatekeeper
 from debate.shared.schemas import CompletionResponse, DebateResult, Verdict
 
 NOW = datetime(2026, 5, 22, tzinfo=timezone.utc)
@@ -23,7 +24,7 @@ def _fake_provider_factory(side_to_reply: dict[str, str] | None = None):
 
     opp_round_re = _re.compile(r"Opponent's previous ping \(round (\d+)")
 
-    def factory(_name: str):
+    def factory(provider_name: str):
         provider = MagicMock()
 
         def complete(*, system, messages, model, max_tokens):
@@ -43,7 +44,7 @@ def _fake_provider_factory(side_to_reply: dict[str, str] | None = None):
                 input_tokens=5,
                 output_tokens=5,
                 model=model,
-                provider="anthropic",
+                provider=provider_name,
             )
 
         provider.complete.side_effect = complete
@@ -115,10 +116,16 @@ def test_sdk_get_cost_report_empty_before_run(tmp_path: Path):
     assert sdk.get_cost_report() == {}
 
 
-def test_sdk_passthrough_gatekeeper_default(tmp_path: Path):
+def test_sdk_real_gatekeeper_default(tmp_path: Path):
     """Default gatekeeper is the passthrough stub — proves the chokepoint
-    interface is honored even before Phase 4.1 lands the real one."""
+    interface is honored by the real production gatekeeper."""
     sdk = _sdk(tmp_path, num_rounds=1)
-    assert hasattr(sdk.gatekeeper, "execute")
-    # Calling it with a lambda just forwards args.
-    assert sdk.gatekeeper.execute(lambda x: x * 2, 21) == 42
+    assert isinstance(sdk.gatekeeper, ApiGatekeeper)
+
+
+def test_sdk_persists_gatekeeper_cost_report_with_judge_calls(tmp_path: Path):
+    sdk = _sdk(tmp_path, num_rounds=1)
+    result = sdk.run_debate()
+    report = result.cost_report
+    assert report["total_usd"] > 0
+    assert report["by_model"]["google/gemini-2.5-flash"]["input_tokens"] == 25

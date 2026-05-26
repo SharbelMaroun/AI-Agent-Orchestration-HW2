@@ -199,10 +199,10 @@ PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md
 |---|---|---|---|
 | 0 | Docs (this PRD + PLAN + per-mechanism PRDs + TODO + PROMPTS) | TODO Phase 0 | ✅ Complete |
 | 2 | Single-Python-command debate (orchestrator + agents, no RAG/watchdog yet) | TODO Phase 2 + 3 | ✅ Complete |
-| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (187 tests · 96.08% coverage) |
+| 3 | Add gatekeeper + watchdog + FIFO logs + tests | TODO Phase 4 + 6 | ✅ Complete (real SDK gatekeeper default; 95.78% coverage) |
 | 4 | Add RAG to Pro and Con | TODO Phase 5 | ✅ Complete (30 curated passages, ChromaDB persistent) |
-| 5 | Polish: terminal menu, README screenshots, analysis notebook, cost report | TODO Phase 7 | ⬜ Not started |
-| 6 | Submission: pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | ⬜ Not started |
+| 5 | Polish: terminal menu, README, analysis notebook, cost report | TODO Phase 7 | ✅ Complete except final real-run evidence capture |
+| 6 | Submission: CI, pyproject.toml clean, public repo, Moodle PDF | TODO Phase 8 | 🟨 Code gates complete; screenshots, tag, and Moodle upload remain |
 
 ---
 
@@ -215,7 +215,7 @@ The project passes if:
 4. `uv run pytest --cov` reports ≥ 85% coverage and 0 failures.
 5. `uv run ruff check` reports 0 violations.
 6. No `.env`, API keys, or other secrets in the repo history.
-7. README contains setup, usage, screenshots, Stage-1 manual transcript, and cost analysis.
+7. README contains setup, usage, final evidence checklist, and cost analysis.
 8. `docs/` contains PRD, PLAN, TODO, PROMPTS, and all per-mechanism PRDs.
 
 ---

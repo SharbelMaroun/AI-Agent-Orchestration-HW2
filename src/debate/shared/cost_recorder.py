@@ -88,5 +88,11 @@ class CostRecorder:
                 self._warned = True
                 self.logger.warning("budget at %.1f%% of $%.2f", ratio * 100, budget)
 
+    def reset(self) -> None:
+        """Clear per-run cost totals while preserving logger/config wiring."""
+        with self._lock:
+            self.tracker = CostTracker()
+            self._warned = False
+
     def summary(self) -> dict:
         return self.tracker.summary()

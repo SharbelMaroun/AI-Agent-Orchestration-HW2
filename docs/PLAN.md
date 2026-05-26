@@ -3,7 +3,7 @@
 **Version:** 1.00 · **Status:** Approved (ADRs final; implementation deltas noted inline below) · References: `docs/PRD.md`
 
 > **Implementation deltas vs. this PLAN (as of Phase 7 close):**
-> - `LLMProvider` registry ships **three** providers, not two: `google` (Gemini, default), `anthropic`, `openai`. `setup.json.models` defaults to `gemini-2.5-flash` (Dogs/Cats) + `gemini-2.5-pro` (Judge).
+> - `LLMProvider` registry ships **three** providers, not two: `google` (Gemini, default), `anthropic`, `openai`. `setup.json.models` currently defaults all three agents to `gemini-2.5-flash`.
 > - Per-agent system prompts moved from `prompts/<side>_system_prompt.md` (flat files) to `skills/<side>/SKILL.md` (directories with YAML frontmatter) per Lesson 05 §5. `src/debate/shared/skill_loader.py` parses the new shape.
 > - The terminal-menu CLI (`src/debate/main.py`) is implemented; `DebateSDK` is its sole dependency.
 > - The architecture details below remain accurate; only file paths and provider list changed.
@@ -12,7 +12,7 @@
 > - `ApiGatekeeper` is implemented as three sibling modules under `src/debate/shared/` (`gatekeeper.py` — the policy class, `rate_limiter.py` — `RollingWindow`/`ServiceState`/`is_retryable`/exceptions/`QueueStatus`, and `pricing.py` — `compute_cost`/`CostTracker`). The split exists to keep `gatekeeper.py` ≤ 150 LOC per CLAUDE.md §4; the public contract is unchanged.
 > - `Orchestrator` runs synchronously in a single process. `multiprocessing.Process` spawning, SIGINT/SIGTERM handling, and the heartbeat queue are deferred — Lesson 05's "N agents = N OS processes" framing is conceptual, not a mandatory Exercise 02 engineering requirement. The sync orchestrator is testable and runs end-to-end; the multi-process upgrade is a wrapper, not a rewrite. See PRD_watchdog §9.
 > - `RAGStore.add` substitutes `{"_":"_"}` for empty metadata dicts (ChromaDB rejects `{}`). Documented in `PRD_rag.md` §3.1.
-> - `DebateSDK` default `gatekeeper=_PassthroughGatekeeper`; production code wires `ApiGatekeeper` once Phase 7 polish lands the real config-driven construction.
+> - `DebateSDK` now builds the real config-driven `ApiGatekeeper` by default. Tests can still inject lightweight gatekeepers through the constructor.
 
 ---
 
