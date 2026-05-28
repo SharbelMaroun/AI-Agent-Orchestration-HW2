@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timezone
 from queue import Empty
 from typing import Any
@@ -46,6 +47,15 @@ def _build_agent(kind: str, setup: SetupConfig, gatekeeper: ApiGatekeeper) -> An
     return JudgeAgent(**common)
 
 
+def _heartbeat_loop(kind: str, heartbeat_q: Any, interval: float, stop: threading.Event) -> None:
+    """Daemon-thread heartbeat — keeps the watchdog happy even while the
+    main loop is inside a long `agent.receive(...)` call (web search +
+    embedder cold-start + LLM round-trip can easily exceed the kill timeout)."""
+    while not stop.is_set():
+        heartbeat_q.put(Heartbeat(agent_id=kind, timestamp=datetime.now(timezone.utc)))
+        stop.wait(interval)
+
+
 def agent_process_main(
     kind: str,
     setup_data: dict,
@@ -61,19 +71,30 @@ def agent_process_main(
     gatekeeper = _build_gatekeeper(setup, rate_path, logging_path)
     agent = _build_agent(kind, setup, gatekeeper)
     heartbeat_seconds = setup.timeouts.watchdog_heartbeat_seconds
-    while True:
-        heartbeat_q.put(Heartbeat(agent_id=kind, timestamp=datetime.now(timezone.utc)))
-        try:
-            envelope = inbox.get(timeout=heartbeat_seconds)
-        except Empty:
-            continue
-        if envelope is None:
-            outbox.put({"agent": kind, "kind": "cost", "payload": gatekeeper.get_token_summary()})
-            return
-        try:
-            result = agent.receive(envelope)
-        except Exception as exc:
-            outbox.put({"agent": kind, "kind": "error", "payload": repr(exc)})
-            continue
-        if result is not None:
-            outbox.put({"agent": kind, "kind": "result", "payload": result})
+    stop_heartbeat = threading.Event()
+    hb_thread = threading.Thread(
+        target=_heartbeat_loop,
+        args=(kind, heartbeat_q, heartbeat_seconds, stop_heartbeat),
+        daemon=True,
+    )
+    hb_thread.start()
+    try:
+        while True:
+            try:
+                envelope = inbox.get(timeout=heartbeat_seconds)
+            except Empty:
+                continue
+            if envelope is None:
+                outbox.put(
+                    {"agent": kind, "kind": "cost", "payload": gatekeeper.get_token_summary()}
+                )
+                return
+            try:
+                result = agent.receive(envelope)
+            except Exception as exc:
+                outbox.put({"agent": kind, "kind": "error", "payload": repr(exc)})
+                continue
+            if result is not None:
+                outbox.put({"agent": kind, "kind": "result", "payload": result})
+    finally:
+        stop_heartbeat.set()

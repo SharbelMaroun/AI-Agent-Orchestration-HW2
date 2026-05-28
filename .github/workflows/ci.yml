@@ -20,13 +20,18 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --extra openai
 
       - name: Ruff lint
         run: uv run ruff check .
 
       - name: Ruff format check
         run: uv run ruff format --check .
+
+      - name: Pre-commit hooks
+        run: |
+          uv pip install pre-commit
+          uv run pre-commit run --all-files --show-diff-on-failure
 
       - name: Tests with coverage
         run: uv run pytest --cov=debate --cov-report=term-missing

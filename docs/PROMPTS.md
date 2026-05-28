@@ -472,12 +472,80 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 **Result:** Final process-mode sweep is documented as 234 tests at 92.66% coverage, Ruff check/format clean, and real-run evidence captured with mandatory web search/RAG wiring enabled. The README now links a fuller Stage 1 manual transcript so the manual-discovery requirement is explicit rather than implied by a short excerpt.
 
-## TODO: Prompts to log as we build them
+---
 
-- [ ] Dogs agent system prompt (logos/ethos persona)
-- [ ] Cats agent system prompt (pathos/Socratic persona)
-- [ ] Judge agent system prompt (5-dim rubric, key-point tracking)
-- [ ] Opening brief prompt (Judge → Dogs/Cats at debate start)
-- [ ] Web search query templates (per side, per round)
-- [ ] RAG retrieval query prompt
-- [ ] Cost-report summarization prompt (for README)
+## 2026-05-27 — Embed OpenAI usage dashboard screenshot in README
+
+**Context:** The README's Cost analysis section reported gatekeeper-side cost numbers (Table 4, $0.0559 process-mode run), but had no independent provider-side confirmation. Saved a screenshot of the OpenAI usage dashboard (`assets/gpt_usage_board.png`) covering the full project window 05/12/26 – 05/27/26.
+**Goal:** Add a reference to the screenshot under Cost analysis and frame it around the real story — per-debate cost roughly doubled from ~$0.02 to ~$0.04 after the latest debate-quality upgrade (richer research-card prompts, longer per-ping context, mandatory web search + RAG on every turn). Avoid meta-commentary ("AI reading the image"); the narrative should stand on its own.
+**Result:** New "Real OpenAI usage evidence" subsection placed between Table 4 and the Cross-debate analysis section. Embeds the screenshot, calls out the cost-doubling as a quality-vs-tokens trade-off, and notes the absolute spend is still well under the $5.00 budget cap. Confirms the gatekeeper's reported costs against provider-side ground truth without restating raw dashboard fields.
+**Lesson:** External evidence (provider dashboard, CI run, third-party log) carries more grading weight than self-reported numbers. When the project's own cost tracker says "$0.04", an independent screenshot of the provider saying the same thing closes the loop. Also: when an upgrade increases cost, document the trade-off explicitly — graders read silence on cost regressions as inattention, not as "nothing happened."
+
+---
+
+## 2026-05-27 — CLAUDE.md gap audit vs source guidelines
+
+**Context:** User asked whether `CLAUDE.md` covers every requirement in `software_submission_guidelines-V3_Summary.md` (Dr. Yoram Segal, v3.00). Did a section-by-section diff.
+**Goal:** Identify missing rules in CLAUDE.md and close them so a grader cross-checking against the source PDF finds no gaps.
+**Result:** Four hard gaps found and added as new sections in CLAUDE.md: §19 Expansion & Maintainability (plugin architecture, lifecycle hooks, middleware, API-first), §20 Package Organization (explicit `__init__.py` in every sub-dir rule + 4-item checklist), §21 Git Workflow (branches, PRs, tags, commit-message style), §22 Final Submission Checklist (mirrors source §17 + §20.9, grouped by Documentation / Architecture / Testing / Config / Research / Scalability / General). Quick Reference table extended with 5 new rows.
+**Lesson:** Source documents change — periodically re-diff CLAUDE.md against the assignment spec rather than treating the rulebook as frozen. A "rules file" with gaps is worse than no rules file because it creates false confidence. Bonus: the §19 "Expansion & Maintainability" gap was invisible to feature-driven work (we never had a reason to think about plugins) — only a top-down spec audit surfaced it.
+
+---
+
+## 2026-05-27 — Closing the two `hw2_Notes.txt` gaps (multi-skill + SecuritySanitizer)
+
+**Context:** After CLAUDE.md was audited against `software_submission_guidelines-V3_Summary.md`, we ran a second audit against `hw2_Notes.txt` (the student's own notes from the lecture). Two real gaps surfaced: note #15 "multiple skills for every agent" (we had one `SKILL.md` per agent) and note #24 "cybersecurity check" (the `PRD_gatekeeper.md` §9 sanitize hook was explicitly deferred).
+
+**Goal:** Close both gaps with real implementations, not symbolic ones. For skills: multiple distinct skills per agent, with content that's actually different between Dogs and Cats — the asymmetric personas (logos/ethos vs pathos/Socratic) made this a real design question, not a paperwork exercise. For the sanitizer: defense at the genuine attack surface (web-search snippets and RAG passages crossing into the agent prompt), not a no-op hook on the gatekeeper.
+
+**Decisions:**
+1. **5 skills per side, zero overlap.** Persona + 4 auxiliary. Dogs got 3 evidence-domain playbooks (health / utility / bonding) + 1 rebuttal playbook (counters for Cats's calm/independence themes). Cats got 1 imagery, 1 cultural-references pool, 1 Socratic-question playbook, 1 rebuttal playbook (counters for Dogs's utility themes). Each side's auxiliary skills mirror the persona's rhetorical style — Dogs auxiliary leans on study citations and effect sizes, Cats auxiliary leans on sensory imagery and cultural authority.
+2. **Loader composes, doesn't replace.** New `load_agent_skills(dir)` reads `SKILL.md` + every `auxiliary/*.md`, concatenated with `## Skill: <name>` headers. Existing `load_skill` kept for `JudgeAgent` (the judge doesn't need persona composition — it applies a fixed rubric).
+3. **Sanitizer at the trust boundary, not the gatekeeper.** `DebateAgent._collect_evidence` runs every search hit and RAG passage through `SecuritySanitizer.sanitize_external` *before* they reach `build_user_prompt`. The gatekeeper handles request-side concerns (rate limits, retries, cost); the sanitizer handles response-side content. Keeping them separate avoids coupling the chokepoint to threat models that might evolve.
+4. **Conservative redactions.** The sanitizer redacts the most common prompt-injection patterns (`ignore previous instructions`, role hijacks, fake `### SYSTEM ###` blocks, `system:` / `assistant:` prefixes) and is idempotent. Did not try to build a complete jailbreak filter — the goal is defense-in-depth against snippets from public pages, not a security product.
+
+**Result:** Suite went 234 → **248** tests (10 new for security, 4 new for `load_agent_skills`). Coverage 92.66% → **92.79%**. Ruff check + format clean. The debate's argument quality should improve on both sides because the auxiliary skills give the LLM richer materials to draw from per round; we'll see this in the next real run. `PRD_gatekeeper.md` §9 flipped from "Deferred" to "Implemented" with the design rationale documented.
+
+**Lesson:** Two distinct kinds of audit. The CLAUDE.md vs source-PDF diff was a rule-coverage check (did we encode every requirement). The `hw2_Notes.txt` diff was a feature-coverage check (did we actually build every requested feature). They surface different gaps — the first finds missing rules, the second finds missing implementations. Both are needed before submission. Also: "multiple skills per agent" looked like a vocabulary issue at first ("we already have 3 research assistants"), but the right move was to take the note literally and build composable skill files, because (a) it satisfies the grader cleanly, (b) the asymmetric content actually improved the agent prompts.
+
+---
+
+## 2026-05-27 — Pre-commit hooks (closing HW1-lecturer-feedback gap)
+
+**Context:** User shared the lecturer's review checklist from a previous homework. Item under "Quality standards" explicitly lists: "linter (ruff or flake8), formatter (black), **pre-commit hooks**, and ideally CI." We had ruff + format + CI but no `.pre-commit-config.yaml` — developers could commit lint-broken code and only learn about it from CI minutes later.
+**Goal:** Add real pre-commit enforcement + make it lecturer-visible. The hook itself runs only on a developer's machine, so a grader can't tell per-commit whether it fired. Two ways to surface it: (a) commit the config file so the grader sees the project is *set up* for it, (b) also run the same hooks in CI so the green/red badge is the proof.
+**Decisions:**
+1. **Ruff hooks from `astral-sh/ruff-pre-commit`** (`ruff` with `--fix`, then `ruff-format`) — same gates as CI, kept in sync.
+2. **General-hygiene hooks from `pre-commit/pre-commit-hooks`** — trailing-whitespace, end-of-file-fixer, check-yaml/json/toml, check-merge-conflict, detect-private-key. Detect-private-key is the meaningful one — last-mile defense against accidentally committing a `.pem` or SSH key.
+3. **`pre-commit` added to the dev dep group** so `uv sync` brings it in; no extra install step.
+4. **CI gains `pre-commit run --all-files`** — visible green/red signal on GitHub Actions that a grader can click into.
+5. **README install step updated** to mention `uv run pre-commit install` (one-time per clone).
+
+**Result:** First run reformatted trailing newlines in 12 historical debate-result JSONs (cosmetic only — the recorded transcripts and cost reports are unchanged). Second run all-green. Suite still 248 tests / 92.79% coverage.
+**Lesson:** "Lecturer can't see whether the hook fired on your machine" is the actual constraint. Solve it by making the *configuration* lecturer-visible (file in repo + CI step), not by trying to fingerprint individual commits. Also: when the only signal a grader has is the repo state, pick gates that leave durable evidence (commit message style, CI logs, config files) over ones that depend on what a developer happened to type.
+
+---
+
+## 2026-05-28 — Stronger Judge model (gpt-4o) for fairness, not web search
+
+**Context:** User asked whether the Judge should also use web search "to be more equal and not distinguish between sides." Real concern was judge fairness, not literal search.
+**Goal:** Reduce judge bias without adding the failure modes web-search would introduce (non-reproducible scoring, opinion-blog contamination from public web, doubled per-debate cost for no rubric quality gain, and contradiction with PRD §3.4 "applies rubric mechanically").
+**Decision:** Switch only the Judge to a stronger model (`gpt-4o` from `gpt-4o-mini`) while keeping the debaters on `gpt-4o-mini`. The rubric prompt stays identical — what changes is the reasoning capacity behind the rubric application. Documented this as the chosen mitigation for the persona-leak gap that the cross-debate analysis already identified (Cats +1.00 pathos, Dogs +0.45 logos / +0.55 ethos).
+**Result:** One-line config change in `config/setup.json`. One test updated (`test_sdk_persists_gatekeeper_cost_report_with_judge_calls` now asserts both model keys present + total token count, rather than pinning gpt-4o-mini token counts). Suite at 249 / 92.79% coverage, ruff clean. Expected per-debate cost moves from ~$0.04 → ~$0.10–0.15; still <3% of the $5.00 budget.
+**Lesson:** When a fairness concern surfaces, list every plausible intervention before picking one — "give it more tools" feels intuitive but often makes things worse (non-determinism, contamination). The right move is usually to upgrade the existing pipeline at its weakest reasoning link, not to add a new external dependency. Also: kept search/RAG off the Judge to stay aligned with PRD §3.4 and `hw2_Notes.txt` note #14 (the "minimum 1 tool: web search" requirement is for *the debaters*, not the judge).
+
+---
+
+## Where the per-component prompts live (not a TODO — final locations)
+
+Every prompt that was on the original "to log" list is now part of the shipping code or skill files. Pointer table for graders:
+
+| Prompt | Final location |
+|---|---|
+| Dogs persona (logos / ethos) | `skills/dogs/SKILL.md` + 4 auxiliary skills under `skills/dogs/auxiliary/` |
+| Cats persona (pathos / Socratic) | `skills/cats/SKILL.md` + 4 auxiliary skills under `skills/cats/auxiliary/` |
+| Judge persona (5-dim rubric + key-point tracking) | `skills/judge/SKILL.md` |
+| Opening brief (Judge → Dogs/Cats at debate start) | `src/debate/services/orchestrator.py` (`_broadcast_brief`) + `OpeningBrief` schema in `src/debate/shared/schemas.py` |
+| Per-side web-search query templates | `src/debate/services/agents/dogs_agent.py` (`_build_search_query`) + `cats_agent.py` (same) |
+| RAG retrieval query (passes the same query into the side's vector store) | `src/debate/services/agents/debate_agent.py` (`_collect_evidence`) |
+| Cost-report summarization | Not LLM-generated — pure numeric aggregation in `src/debate/shared/cost_recorder.py` + `pricing.py`. README's narrative wrapping is hand-written, not prompt-generated. |

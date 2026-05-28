@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from debate.shared.skill_loader import load_skill
+from debate.shared.skill_loader import load_agent_skills, load_skill
 
 
 def _write_skill(tmp_path: Path, body: str, with_frontmatter: bool = True) -> Path:
@@ -70,3 +70,36 @@ def test_load_real_cats_skill_works() -> None:
 def test_load_real_judge_skill_works() -> None:
     body = load_skill("skills/judge")
     assert "Judge" in body
+
+
+def test_load_agent_skills_composes_persona_and_auxiliary(tmp_path: Path) -> None:
+    skill_dir = _write_skill(tmp_path, "I am the persona.\n")
+    aux = skill_dir / "auxiliary"
+    aux.mkdir()
+    (aux / "alpha.md").write_text("---\nname: alpha\n---\n\nAlpha body.", encoding="utf-8")
+    (aux / "beta.md").write_text("Beta body, no frontmatter.", encoding="utf-8")
+    body = load_agent_skills(skill_dir)
+    assert "I am the persona." in body
+    assert "## Skill: alpha" in body
+    assert "Alpha body." in body
+    assert "## Skill: beta" in body
+    assert "Beta body" in body
+    assert body.index("alpha") < body.index("beta")  # sorted load order
+
+
+def test_load_agent_skills_no_auxiliary_returns_persona_only(tmp_path: Path) -> None:
+    skill_dir = _write_skill(tmp_path, "Just the persona.\n")
+    body = load_agent_skills(skill_dir)
+    assert body == "Just the persona."
+
+
+def test_load_agent_skills_real_dogs_includes_all_four_auxiliary() -> None:
+    body = load_agent_skills("skills/dogs")
+    for name in ("evidence_health", "evidence_utility", "evidence_bonding", "rebuttal_aloofness"):
+        assert f"## Skill: {name}" in body
+
+
+def test_load_agent_skills_real_cats_includes_all_four_auxiliary() -> None:
+    body = load_agent_skills("skills/cats")
+    for name in ("imagery_warmth", "culture_literary", "socratic_moves", "rebuttal_utility"):
+        assert f"## Skill: {name}" in body

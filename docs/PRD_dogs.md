@@ -1,7 +1,7 @@
 # PRD — Dogs Agent
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Side: `dogs` · Style: **logos + ethos**
-**Status:** Implemented Phase 3.6 (Skill restructured in Phase 7.7 per Lesson 05 §5). Skill at `skills/dogs/SKILL.md`; RAG corpus at `data/dogs/*.txt` (15 passages, max 192 words each).
+**Status:** Implemented Phase 3.6; Skill restructured Phase 7.7 (Lesson 05 §5); **multi-skill composition added 2026-05-27** per `hw2_Notes.txt` note #15. Primary persona at `skills/dogs/SKILL.md`; 4 auxiliary skills under `skills/dogs/auxiliary/` (`evidence_health.md`, `evidence_utility.md`, `evidence_bonding.md`, `rebuttal_aloofness.md`) loaded together by `load_agent_skills()`. RAG corpus at `data/dogs/*.txt` (15 passages, max 192 words each).
 
 ---
 

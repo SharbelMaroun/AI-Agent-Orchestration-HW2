@@ -1,9 +1,5 @@
-"""DebateAgent — abstract subclass that adds evidence-gathering, JSON
-parsing, and clash validation on top of BaseAgent. Pure helpers live in
-`_debate_agent_helpers.py`.
-
-RAG + WebSearch dependencies are typed as `Protocol`s so this module
-compiles before any concrete tool implementations land."""
+"""DebateAgent — abstract subclass adding evidence-gathering + JSON parsing
++ clash validation on top of BaseAgent. Pure helpers in `_debate_agent_helpers.py`."""
 
 from __future__ import annotations
 
@@ -16,11 +12,14 @@ from debate.services.agents._debate_agent_helpers import (
     PingParseError,  # noqa: F401
     build_user_prompt,
     parse_ping_json,
+    sanitize_hits,
+    sanitize_passages,
     validate_clash,
 )
 from debate.services.agents.base_agent import BaseAgent
 from debate.services.research import build_research_cards
 from debate.shared.schemas import OpeningBrief, Ping, Side, YourTurn
+from debate.shared.security import SecuritySanitizer
 
 
 class RAGLike(Protocol):
@@ -49,6 +48,7 @@ class DebateAgent(BaseAgent):
         search_tool: SearchLike | None = None,
         rag_k: int = 3,
         search_max_results: int = 5,
+        sanitizer: SecuritySanitizer | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -56,6 +56,7 @@ class DebateAgent(BaseAgent):
         self.search_tool = search_tool
         self.rag_k = rag_k
         self.search_max_results = search_max_results
+        self.sanitizer = sanitizer or SecuritySanitizer()
         self.opening_brief: OpeningBrief | None = None
 
     @abstractmethod
@@ -63,15 +64,15 @@ class DebateAgent(BaseAgent):
         """Persona-specific query phrasing (e.g., Dogs adds 'study'/'research')."""
 
     def _collect_evidence(self, query: str) -> dict[str, list]:
-        """Gather web-search hits + RAG passages. Either tool may be absent."""
+        """Gather web-search hits + RAG passages; all untrusted text is
+        sanitized before it can reach the agent's prompt (see security.py)."""
         evidence: dict[str, list] = {"search": [], "rag": [], "research_cards": []}
         if self.search_tool is not None:
-            evidence["search"] = self.search_tool.search(
-                query,
-                max_results=self.search_max_results,
-            )
+            hits = self.search_tool.search(query, max_results=self.search_max_results)
+            evidence["search"] = sanitize_hits(hits, self.sanitizer)
         if self.rag is not None:
-            evidence["rag"] = self.rag.retrieve(query, k=self.rag_k)
+            passages = self.rag.retrieve(query, k=self.rag_k)
+            evidence["rag"] = sanitize_passages(passages, self.sanitizer)
         evidence["research_cards"] = [
             card.model_dump() for card in build_research_cards(self.side, evidence)
         ]

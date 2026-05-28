@@ -85,8 +85,14 @@ Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of b
 - Backoff: `retry_after_seconds × attempt_number`.
 - Max attempts from config (default 3). Final failure → raise `ApiCallFailedError`.
 
-## 9. Cybersecurity hook — Deferred
-**Status:** Not implemented in Phase 4.1. `execute()` does not yet accept a `sanitize` callable. The decision: until we have a documented incident class to defend against (PII leak, prompt-injection through search results, etc.), adding a no-op hook is dead weight. Will land when one of the following triggers: (a) we route real user input through the gatekeeper; (b) web-search results contain mixed user content we don't fully trust. Tracked as a deferred item in `docs/TODO.md` §4.1.
+## 9. Cybersecurity hook — Implemented
+**Status:** Implemented 2026-05-27 via `src/debate/shared/security.py` (`SecuritySanitizer`). Closes `hw2_Notes.txt` note #24. Trigger (b) materialised: every Pro/Con ping consumes DuckDuckGo search snippets and RAG passages, both of which are untrusted text crossing into the agent's prompt.
+
+**Design:** stateless `SecuritySanitizer` with `sanitize_external(text) -> text` and `wrap_untrusted(text, source) -> "<source>...</source>"`. Applied at the trust boundary inside `DebateAgent._collect_evidence` (via `sanitize_hits` / `sanitize_passages` helpers), not inside the gatekeeper, because the threat is the *content* of the external response, not the request itself.
+
+**Defenses:** Unicode NFKC normalization; control-character stripping; regex redaction of common prompt-injection patterns ("ignore previous instructions", role hijacks like "you are now…", fake `### SYSTEM ###` blocks, `system:` / `assistant:` role prefixes); per-snippet truncation (4000 chars default).
+
+**Tests:** `tests/unit/test_security.py` — 10 cases covering empty input, clean passthrough, every redaction pattern, truncation, control-char stripping, idempotence, and the wrap-delimiter helper.
 
 ## 9a. Prompt caching (Anthropic)
 - Mark the system prompt and the first ~3 turns of conversation history with `cache_control: { type: "ephemeral" }` on every call.

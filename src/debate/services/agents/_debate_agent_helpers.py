@@ -9,6 +9,29 @@ import re
 from datetime import datetime, timezone
 
 from debate.shared.schemas import Ping, Side
+from debate.shared.security import SecuritySanitizer
+
+
+def sanitize_search_hit(hit, sanitizer: SecuritySanitizer):
+    for field in ("title", "snippet"):
+        if hasattr(hit, field):
+            setattr(hit, field, sanitizer.sanitize_external(getattr(hit, field) or ""))
+    return hit
+
+
+def sanitize_rag_passage(passage, sanitizer: SecuritySanitizer):
+    if hasattr(passage, "text"):
+        passage.text = sanitizer.sanitize_external(passage.text or "")
+    return passage
+
+
+def sanitize_hits(hits, sanitizer: SecuritySanitizer):
+    return [sanitize_search_hit(h, sanitizer) for h in hits]
+
+
+def sanitize_passages(passages, sanitizer: SecuritySanitizer):
+    return [sanitize_rag_passage(p, sanitizer) for p in passages]
+
 
 _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 
