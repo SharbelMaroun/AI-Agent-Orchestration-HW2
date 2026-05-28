@@ -64,6 +64,47 @@ Total tasks target: 500–700 atomic. Phases are roughly sequential but tasks wi
 - [x] Debater prompt includes research cards so the final ping can target the Judge rubric
 - [x] Added `tests/unit/test_researcher.py` plus DebateAgent prompt/evidence assertions
 
+### 7.9 Speed pass — 2026-05-28 ✅
+- [x] Revert Judge to `gpt-4o-mini` in `config/setup.json` (Judge was dominant wall-clock cost on per-ping hot path)
+- [x] Parallelize web search + RAG inside `DebateAgent._collect_evidence` via `ThreadPoolExecutor(max_workers=2)`
+- [x] Updated `test_sdk_persists_gatekeeper_cost_report_with_judge_calls` to single-model assertion
+- [x] Logged decision + lesson in `docs/PROMPTS.md` (entry "2026-05-28 — Reverted Judge to gpt-4o-mini + parallelized evidence collection")
+- [x] Updated README provider/config section + bias-mitigation knobs to note the revert
+- [x] Suppress remaining HF Hub "unauthenticated requests" UserWarning in `embedder.py` (logger fix from PR #22 missed `warnings.warn` channel)
+
+### 7.10 Judge JSON robustness — 2026-05-28 ✅
+- [x] `JudgeAgent._extract_json` now strips trailing commas before `json.loads` (common LLM glitch was aborting 20-ping debates)
+- [x] New `JudgeAgent._parse_or_repair` retries once with a repair prompt if parsing still fails, mirroring the debater-side repair pattern
+- [x] Both `score_ping` and `decide_winner` route through `_parse_or_repair`
+- [x] Added 2 tests in `test_judge_helpers.py` (trailing-comma tolerance + repair-retry path); suite 249 → 251 passing
+
+### 7.11 Bias rebalance — Dogs 74% skew correction — 2026-05-28 ✅ (iteration 2)
+- [x] Census of 19 saved debates surfaced a 14/5 Dogs-win skew (root cause: PR #22 added 3 evidence skills to Dogs but only 1 to Cats — asymmetric multi-skill upgrade)
+- [x] Added `skills/cats/auxiliary/empirical_independence.md` — 5th Cats skill, logos-shaped. **KEPT.**
+- [x] ~~Added per-ping pathos quota to `skills/dogs/SKILL.md`~~ — **REVERTED** after `debate_20260528T152815.json` showed it backfired (Dogs pathos jumped to 2.90; Dogs won 146–130)
+- [x] Added `skills/cats/auxiliary/expert_authority.md` — 6th Cats skill, ethos-shaped (named ethologists Bradshaw/Delgado/Ellis/Vitale, professional bodies AVMA/AAFP/International Cat Care/ASPCA, journals as ethos anchors). Directly targets the measured +1.00 ethos gap from `debate_20260528T152815.json`. Cats now has **6 auxiliary skills vs Dogs' 4** — intentional asymmetry.
+- [x] Updated `test_load_agent_skills_real_cats_includes_all_six_auxiliary` (was `_five_`)
+- [x] README "Multi-skill personas" table + rebalance subsection updated to reflect iteration 2
+- [ ] Future: collect a fresh 5–10 debate sample to measure whether the ethos skill closes the gap
+
+### 7.12 HF Hub warning — subprocess-safe suppression — 2026-05-28 ✅
+- [x] Diagnosed: `warnings.filterwarnings` in `embedder.py` does not cross the `multiprocessing` boundary; subprocess workers re-emitted the "unauthenticated HF Hub" notice on cold start
+- [x] Moved suppression + env vars to `src/debate/__init__.py` so every interpreter (parent + child) applies them on first import
+- [x] Discovered second leak channel: HF prints the unauthenticated notice via direct `sys.stderr.write`, bypassing both warnings filters AND logger level. Added scoped `contextlib.redirect_stderr` around SentenceTransformer load in `embedder.py._load_model` — covers the only remaining channel. Real-run-verified clean stdout.
+
+### 7.13 Off-by-one `refers_to_ping` auto-correct — 2026-05-28 ✅
+- [x] Diagnosed: real debate aborted at Round 10 with `ClashViolationError('ping for round 10 must refer to opponent ping 9, got refers_to_ping=8')` — LLM hallucinated wrong round number on the last round
+- [x] Extended `DebateAgent.handle_your_turn` auto-correct (previously only fixed `None` case) to overwrite ANY non-matching `refers_to_ping` with `envelope.previous_ping.round`. Structural field is unambiguous from envelope context; rhetorical clash still scored separately by Judge
+- [x] Updated `test_handle_your_turn_wrong_refers_to_ping_is_autocorrected` (was `_still_raises`)
+
+### 7.14 Judge model fairness experiment + rubric quality-tightening — 2026-05-28 ✅
+- [x] Ran 4 sequential debates with mini judge after iteration-2 skills (Dogs 4/4, avg margin 8.0, logos gap +1.00 unmoved). Confirmed agent-side rebalance cannot close logos.
+- [x] Flipped judge to `gpt-4o`, ran one debate (`debate_20260528T180117.json`). Result: 140-140 tie, Cats wins on tie-break. **Logos gap collapsed from +1.00 to 0** — confirms the bias lived in the judge model, not the agent prompts.
+- [x] Reverted `config/setup.json.models.judge.name` back to `gpt-4o-mini` for cost/speed; `gpt-4o` experiment preserved as documented one-shot finding
+- [x] Updated `test_sdk_persists_gatekeeper_cost_report_with_judge_calls` cost assertion back to single-model
+- [x] Sharpened `skills/judge/SKILL.md` rubric anchors to score **quality of explanation** (Toulmin warrant explained, logical chain visible, image earns place, source named + institution recognized, rebuttal targets warrant). Old rubric had only 0/3 anchors ("is the warrant present?"); new rubric has 0/1/2/3 anchors that distinguish "claim recited" from "warrant explained." Still PRD §3.3 compliant — five dimensions unchanged.
+- [x] README "Updated result after 19 saved debates" subsection expanded with iteration-2 table, iteration-3 experiment table, and judge-rubric-tightening note
+
 ---
 
 ## Phase 0 — Documentation & Design (currently 🟨)
@@ -748,6 +789,9 @@ Stage 1 is documented in `README.md` under "Stage 1 manual discovery transcript"
 - [x] **Silenced HF_TOKEN warning** — `embedder._load_model` sets `HF_HUB_DISABLE_TELEMETRY=1` + `TRANSFORMERS_VERBOSITY=error` + `huggingface_hub` logger to ERROR before importing `sentence_transformers`. Removes the "unauthenticated requests to the HF Hub" warning that printed on every cold-start (model is cached locally, the warning was cosmetic only).
 - [x] **Background heartbeat thread in `process_worker.py`** — agents now spawn a daemon thread that emits a `Heartbeat` every `watchdog_heartbeat_seconds` regardless of what the main loop is doing. Fixes spurious `AGENT_TIMEOUT` + `AGENT_RESTARTED` during the first ping (embedder cold-start + DDG search + LLM call together exceeded the 90s kill timeout, causing the watchdog to kill and re-pay the cold-start cost on the restart). Eliminates the wasted restart and the visible WARNING log on every real run. Test in `test_process_worker.py`. Suite at **249** tests.
 - [x] **Pre-commit hooks (HW1-lecturer-feedback gap)** — added `.pre-commit-config.yaml` wiring ruff (lint+format) + pre-commit-hooks repo (trailing-whitespace, end-of-file-fixer, check-yaml/json/toml, check-merge-conflict, detect-private-key). `pre-commit` added to dev dependency group. CI gained a `pre-commit run --all-files` step so the hooks are also enforced server-side (lecturer can see green in GitHub Actions). README "Installation" notes `uv run pre-commit install`. First run reformatted trailing newlines in 12 saved debate JSONs (cosmetic, evidence content unchanged).
+- [x] **Tie-break / rationale consistency fix (deep-audit P1)** — `debate_20260528T180117.json` recorded `winner=cats, margin=0` but the LLM-authored `written_rationale` said pathos *"favored dogs slightly"*, contradicting the recorded winner. Root cause: `JudgeAgent.decide_winner` overrode `winner`/`margin` *after* the LLM authored its rationale, so the text and the verdict could disagree. Extracted pure helpers (`tie_break`, `is_concession`, `detect_collusion`, `extract_key_points`, `CONCESSION_PHRASES`) into `src/debate/services/agents/_judge_helpers.py`; `tie_break` now returns `(winner, explanation)` and `decide_winner` prepends the deterministic explanation to `written_rationale` whenever the tie-break fires. Net effect: text always matches verdict. Also shrunk `judge_agent.py` from 143→120 non-blank-non-comment lines, restoring headroom under the 150-LOC cap. Back-compat shims kept on `JudgeAgent` for `_tie_break`/`_is_concession`/`_detect_collusion`/`_extract_key_points` so existing tests pass unchanged. Suite at **251 passing / 92.80%** coverage; ruff clean.
+- [x] **Judge persona-leak mitigation (deep-audit follow-up)** — cross-debate analysis showed dogs scored exactly 140 in 23/30 prior debates (77%) with `pathos = 2 in 288/310 pings` — the judge was applying a near-deterministic per-persona score template (dogs 3-3-2-3-3 = 14/ping, cats 3-2-3-2-3 = 13/ping) regardless of argument quality. Fix: stripped the `side` label from `score_ping`'s prompt and added an explicit instruction to "score what is actually on the page" rather than anchoring on the side's expected rhetorical style. Side metadata is still attached to the `Score` object after the LLM responds (deterministic, in code) so verdict aggregation is unaffected. **Empirical effect** across 3 post-fix runs (`debate_20260528T203256/203858/204425.json`): 2 of 3 still hit the flat pattern, but run 3 broke it cleanly (dogs pathos 1.6, cats logos 2.8 + ethos 2.9, cats won 147-136 — the first cats-win driven by multi-dim outscoring rather than the pathos-vs-logos tradeoff). The fix removes one bias channel and unlocks flexibility; the residual bias is structural (rubric × persona arithmetic) and documented as a known limitation in README. Suite still 251 passing / 92.80% coverage; ruff clean.
+- [x] **Judge strictness mandate (`skills/judge/SKILL.md`)** — pre-fix the judge gave per-ping totals of 13-14 almost universally (288/310 dogs pings got exactly `3-3-2-3-3 = 14`); the rubric anchors made 3 the default rather than the ceiling. Added a "Strictness mandate" preamble plus a calibration-check footer telling the judge that **1 is the default, 3 is rare and must be earnable to a specific phrase**, and that per-ping totals of 13+ should trigger a re-read. Also rewrote each dimension's 1/2/3 anchors as "default / solid / exceptional" with concrete higher bars for 3 (e.g. ethos 3 now requires explicit concession of a sub-point, not just a named institution). **Empirical effect** across 2 post-fix runs (`debate_20260528T215228/215826.json`): dogs scored 128 and 137 (neither hit 140 — first non-fluke break of the lock); cats scored 138 and 119 (much wider spread); per-ping totals now span 11-14 instead of always 13-14; dogs ethos avg dropped 2.99 → 2.0 in run 1 and cats structure avg dropped 2.91 → 2.0 in run 2 (real per-dim downgrades, not just totals shifting). Winner split 1-1, margins widened to 10 and 18. The judge is now visibly grading rather than rubber-stamping. Suite still 251 passing; ruff clean.
 
 ### 8.2 Repo hygiene ✅
 - [x] No `.env` in git history (`git log --all -- .env` returns empty)

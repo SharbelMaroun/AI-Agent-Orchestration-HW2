@@ -99,7 +99,20 @@ def test_load_agent_skills_real_dogs_includes_all_four_auxiliary() -> None:
         assert f"## Skill: {name}" in body
 
 
-def test_load_agent_skills_real_cats_includes_all_four_auxiliary() -> None:
+def test_load_agent_skills_real_cats_includes_all_six_auxiliary() -> None:
+    """Cats has 6 auxiliary skills vs Dogs' 4 — intentional asymmetry to
+    counterbalance Dogs' multi-skill dimension-stacking advantage. 5th
+    skill (`empirical_independence`) added 2026-05-28 for logos parity;
+    6th (`expert_authority`) added same day after the pathos-quota revert
+    pointed to ethos as the remaining Dogs advantage. See README
+    "Updated result after 19 saved debates"."""
     body = load_agent_skills("skills/cats")
-    for name in ("imagery_warmth", "culture_literary", "socratic_moves", "rebuttal_utility"):
+    for name in (
+        "culture_literary",
+        "empirical_independence",
+        "expert_authority",
+        "imagery_warmth",
+        "rebuttal_utility",
+        "socratic_moves",
+    ):
         assert f"## Skill: {name}" in body
