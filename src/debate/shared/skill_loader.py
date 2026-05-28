@@ -26,6 +26,29 @@ def load_skill(skill_path: str | Path) -> str:
     return _strip_frontmatter(text)
 
 
+def load_agent_skills(skill_dir: str | Path) -> str:
+    """Load an agent's persona + all auxiliary skills as one system prompt.
+
+    Layout (per hw2_Notes.txt note #15, "multiple skills per agent"):
+      `<dir>/SKILL.md`              — primary persona (mandatory)
+      `<dir>/auxiliary/*.md`        — domain / move / rebuttal sub-skills
+                                       (any number, sorted alphabetically)
+
+    Each skill is delimited with a `## Skill: <name>` header so the LLM sees
+    a structured composition instead of one monolithic prompt.
+    """
+    base = Path(skill_dir)
+    persona = load_skill(base)
+    parts = [persona]
+    aux_dir = base / "auxiliary"
+    if aux_dir.is_dir():
+        for path in sorted(aux_dir.glob("*.md")):
+            parts.append(
+                f"\n---\n## Skill: {path.stem}\n\n{_strip_frontmatter(path.read_text(encoding='utf-8'))}"
+            )
+    return "\n".join(parts).strip()
+
+
 def _strip_frontmatter(text: str) -> str:
     stripped = text.lstrip()
     if not stripped.startswith(FRONTMATTER_DELIM):

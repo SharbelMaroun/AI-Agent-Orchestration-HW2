@@ -1,7 +1,7 @@
 # PRD — Cats Agent
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Side: `cats` · Style: **pathos + Socratic**
-**Status:** Implemented Phase 3.7 (Skill restructured in Phase 7.7 per Lesson 05 §5). Skill at `skills/cats/SKILL.md`; RAG corpus at `data/cats/*.txt` (15 passages, max 196 words each).
+**Status:** Implemented Phase 3.7; Skill restructured Phase 7.7 (Lesson 05 §5); **multi-skill composition added 2026-05-27** per `hw2_Notes.txt` note #15. Primary persona at `skills/cats/SKILL.md`; 4 auxiliary skills under `skills/cats/auxiliary/` (`imagery_warmth.md`, `culture_literary.md`, `socratic_moves.md`, `rebuttal_utility.md`) loaded together by `load_agent_skills()`. RAG corpus at `data/cats/*.txt` (15 passages, max 196 words each).
 
 ---
 

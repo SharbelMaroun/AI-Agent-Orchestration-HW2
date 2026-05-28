@@ -183,7 +183,7 @@ omit = ["src/main.py", "*/tests/*", "src/**/gui/*"]
 fail_under = 85
 ```
 
-Document edge cases with input + expected response. Defensive programming, clear error messages, detailed logs, graceful degradation. Generate automated pass/fail reports.
+Document edge cases with input + expected response. Defensive programming, clear error messages, detailed logs, graceful degradation. Generate automated pass/fail reports. **Capture screenshots of faults** (CLI tracebacks, GUI error states, browser console) when they meaningfully illustrate failure modes; embed in README or `assets/`.
 
 ## 7. Linting — Zero Ruff Violations
 
@@ -276,6 +276,84 @@ Mandatory deliverable. Log every significant prompt used to build the project, w
 
 Functional Suitability · Performance Efficiency · Compatibility · Usability · Reliability · Security · Maintainability · Portability.
 
+## 19. Expansion & Maintainability
+
+- **Plugin architecture:** new functionality plugs in via clear extension interfaces; do not modify core code to add features.
+- **Lifecycle hooks:** support connection points such as `beforeCreate` / `afterUpdate` (or equivalents) so consumers can extend behavior without forking.
+- **Middleware:** support a middleware chain for cross-cutting concerns (logging, auth, rate-limit decoration).
+- **API-first design:** every component exposes a stable public API before any consumer is built on top of it.
+- **Maintainable code:** modular · separated concerns · reusable components · testable · easy to debug.
+
+## 20. Package Organization
+
+- **`pyproject.toml`** (preferred) specifies name, version, description, author, license, dependencies (pinned).
+- **`__init__.py` is mandatory** in the package root **AND every sub-directory**. Use it to export the public API via `__all__` and to define `__version__`.
+- **Relative imports or package names only.** Never filesystem-absolute paths. File I/O is also relative to the package.
+- **Package checklist (verify before commit):**
+  1. `pyproject.toml` exists with name, version, pinned dependencies.
+  2. `__init__.py` in root + every sub-dir; exports public API via `__all__`; defines `__version__`.
+  3. Source under `src/<pkg>/`, tests under `tests/`, docs under `docs/`.
+  4. All imports relative; no absolute paths anywhere.
+
+## 21. Git Workflow
+
+- **Commits:** meaningful messages, conventional style (e.g., `feat:`, `fix:`, `docs:`, `refactor:`).
+- **Branches:** feature branches off `main`; never push directly to `main`.
+- **Pull Requests:** every merge to `main` goes via PR with code review; PR description references the TODO sub-phase it closes.
+- **Tags:** tag major versions (`v1.0.0`, …) on the merge commit.
+- **History:** linear and clean; squash or rebase trivial fix-ups before merging.
+
+## 22. Final Submission Checklist
+
+Before submission, verify every box. Maps to source §17 + §20.9.
+
+**Documentation**
+- [ ] `README.md` complete: install, usage, examples, screenshots, troubleshooting, license, credits, authors, homework-report sections.
+- [ ] `docs/PRD.md`, `docs/PLAN.md`, `docs/TODO.md` current and consistent with code.
+- [ ] One `docs/PRD_<mechanism>.md` per algorithm/central mechanism.
+- [ ] `docs/PROMPTS.md` ("prompt book") logs every significant prompt with context, goal, result, lesson.
+
+**Architecture & code**
+- [ ] All business logic routed through the SDK.
+- [ ] All external API calls routed through `ApiGatekeeper`.
+- [ ] No code duplication (extracted at 2+ copies); mixins follow single-concern rule.
+- [ ] Every file ≤ 150 LOC (excluding blanks + comments).
+- [ ] Comments explain *why*; docstrings on every public function/class/module.
+- [ ] Consistent style, descriptive names.
+
+**Testing & quality**
+- [ ] TDD: tests written before/with the code.
+- [ ] `uv run pytest --cov` ≥ 85%, 0 failures.
+- [ ] `uv run ruff check .` and `uv run ruff format --check .` both 0 violations.
+- [ ] Edge cases documented with input + expected response.
+- [ ] Automated pass/fail reports generated.
+
+**Configuration & security**
+- [ ] All config in `config/*.json`, versioned (`"version": "1.00"`).
+- [ ] No hardcoded values in source.
+- [ ] `.env` git-ignored; only `.env-example` (or `.env.example`) committed.
+- [ ] No API keys / passwords / tokens anywhere in git history.
+- [ ] `.gitignore` covers `.env`, `*.key`, `*.pem`, `credentials.json`.
+- [ ] `pyproject.toml` + `uv.lock` committed; `uv` is the only package manager used.
+
+**Research & visualization**
+- [ ] Systematic experiments with controlled parameter variations.
+- [ ] Sensitivity analysis present.
+- [ ] Analysis notebook with high-quality graphs (LaTeX equations, academic refs where relevant).
+- [ ] Token-cost table + optimization strategies documented in README.
+
+**Scalability & standards**
+- [ ] Extension points documented (plugin interfaces, hooks, middleware).
+- [ ] Package layout matches §20 (incl. `__init__.py` in every sub-dir).
+- [ ] Parallel-processing sections (if any) are thread-safe.
+- [ ] Building-block design (Input / Output / Setup) for every component.
+- [ ] ISO/IEC 25010 attributes considered.
+
+**General**
+- [ ] Clean git history; meaningful commit messages; tagged release.
+- [ ] LICENSE file present; attributions complete.
+- [ ] Public GitHub repo (or shared with lecturer); both partners link the same URL on Moodle.
+
 ---
 
 ## Quick Reference
@@ -292,3 +370,8 @@ Functional Suitability · Performance Efficiency · Compatibility · Usability �
 | Secrets in code | 0 (use env vars + `.env-example`) |
 | Version start | 1.00 |
 | OOP duplication | Extract at 2+ copies |
+| `__init__.py` | In root + every sub-dir; exports `__all__` + `__version__` |
+| Imports | Relative or package-name only — never filesystem-absolute paths |
+| Git workflow | Feature branch → PR → review → merge; tag releases |
+| Extension points | Plugin interfaces + lifecycle hooks + middleware |
+| Final checklist | §22 — verify before every submission |

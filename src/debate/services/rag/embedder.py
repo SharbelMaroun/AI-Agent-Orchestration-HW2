@@ -28,6 +28,12 @@ class Embedder:
         cached = type(self)._cache.get(self.model_name)
         if cached is not None:
             return cached
+        import logging as _logging
+        import os
+
+        os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
+        os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+        _logging.getLogger("huggingface_hub").setLevel(_logging.ERROR)
         from sentence_transformers import SentenceTransformer
 
         model = SentenceTransformer(self.model_name)

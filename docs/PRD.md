@@ -209,7 +209,7 @@ PRD-level phases group the fine-grained `docs/TODO.md` phases. See `docs/TODO.md
 ## 7. Acceptance Test (Final Submission)
 
 The project passes if:
-1. `uv sync` then `uv run python -m debate` runs end-to-end on a fresh clone.
+1. `uv sync --extra openai` then `uv run python -m debate` runs end-to-end on a fresh clone.
 2. A full debate produces ≥ 10 pings per side, JSON-logged.
 3. Judge declares a non-tie winner with rationale.
 4. `uv run pytest --cov` reports ≥ 85% coverage and 0 failures.

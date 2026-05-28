@@ -73,3 +73,19 @@ def test_worker_forwards_agent_result(monkeypatch):
     )
 
     assert outbox.items[0] == {"agent": "cats", "kind": "result", "payload": "handled:x"}
+
+
+def test_heartbeat_loop_ticks_at_interval_until_stop():
+    import threading
+
+    from debate.services.process_worker import _heartbeat_loop
+
+    q = FakeQueue()
+    stop = threading.Event()
+    t = threading.Thread(target=_heartbeat_loop, args=("dogs", q, 0.01, stop), daemon=True)
+    t.start()
+    threading.Event().wait(0.05)
+    stop.set()
+    t.join(timeout=1)
+    assert len(q.items) >= 2
+    assert all(getattr(h, "agent_id", None) == "dogs" for h in q.items)

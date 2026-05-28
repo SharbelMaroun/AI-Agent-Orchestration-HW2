@@ -7,7 +7,7 @@
   "models": {
     "dogs":  { "provider": "openai", "name": "gpt-4o-mini" },
     "cats":  { "provider": "openai", "name": "gpt-4o-mini" },
-    "judge": { "provider": "openai", "name": "gpt-4o-mini" }
+    "judge": { "provider": "openai", "name": "gpt-4o" }
   },
   "timeouts": {
     "agent_response_seconds": 60,
