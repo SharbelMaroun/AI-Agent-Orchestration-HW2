@@ -24,19 +24,26 @@ class Embedder:
         self._model: Any | None = None
 
     def _load_model(self) -> Any:
-        """Resolve (and cache) the underlying SentenceTransformer instance."""
+        """Resolve (and cache) the underlying SentenceTransformer instance.
+
+        HF Hub silence is layered: env vars + warning filters in
+        `debate/__init__.py` cover the logger/warnings channels. The
+        unauthenticated-requests notice however is written via a direct
+        `sys.stderr.write` deep inside `huggingface_hub`, which bypasses
+        both the warnings filter chain and the logger level. We suppress
+        it with a scoped stderr redirect around the model load only —
+        first call per interpreter, ~1s window. Anything emitted during
+        normal operation still reaches stderr."""
         cached = type(self)._cache.get(self.model_name)
         if cached is not None:
             return cached
-        import logging as _logging
-        import os
+        import contextlib
+        import io
 
-        os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
-        os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
-        _logging.getLogger("huggingface_hub").setLevel(_logging.ERROR)
-        from sentence_transformers import SentenceTransformer
+        with contextlib.redirect_stderr(io.StringIO()):
+            from sentence_transformers import SentenceTransformer
 
-        model = SentenceTransformer(self.model_name)
+            model = SentenceTransformer(self.model_name)
         type(self)._cache[self.model_name] = model
         return model
 

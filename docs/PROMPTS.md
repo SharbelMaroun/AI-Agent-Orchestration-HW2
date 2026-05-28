@@ -526,13 +526,172 @@ Log every significant prompt used to build this project: the context, the goal, 
 
 ---
 
-## 2026-05-28 — Stronger Judge model (gpt-4o) for fairness, not web search
+## 2026-05-28 — Judge fairness experiment + rubric quality-tightening (iteration 3)
+
+**Context:** Iteration-2 ran 4 sequential measurement debates with the iteration-2 skills (5th Cats logos + 6th Cats ethos) under `gpt-4o-mini` judge. Result: Dogs 4/4, avg margin 8.0, logos gap +1.00 *immovable* across all runs, ethos gap closed only once in 4 runs. Conclusion: the agent-side rebalance was working substantively but the smaller judge wasn't crediting Cats' citations on equal footing with Dogs' (AHA/JAMA).
+
+**Decision (judge experiment):** Flip judge to `gpt-4o` for one debate as a fairness control. Same agent prompts, same skills, same agent text — only the judge model changes. If the logos gap collapses, the bias was in the judge. If it persists, the bias is real and prompt-side. Cost ~5× ($0.06 → $0.30 per debate) but well under the $5.00 cap.
+
+**Result (judge experiment):** `debate_20260528T180117.json`. Per-dimension deltas:
+
+| dim | mini avg (4 runs) | gpt-4o (1 run) |
+|---|---:|---:|
+| structure | 0 | 0 |
+| **logos** | **+1.00 Dogs** | **0** (collapsed) |
+| pathos | -0.98 Cats | -1.00 Cats |
+| ethos | +0.78 Dogs | +1.00 Dogs |
+| clash | 0 | 0 |
+
+Final: **140-140 tie, Cats wins on tie-break** (Clash tied, Pathos cascade favours Cats per `JudgeAgent._tie_break`). Pathos and ethos deltas were unchanged across judge models, confirming those reflect real prompt-side differences. Logos collapse confirms the +1.00 Dogs advantage under `gpt-4o-mini` was **judge bias, not agent weakness**.
+
+**Decision (submission config):** Reverted judge to `gpt-4o-mini` for cost/speed (matches the documented default in README cost analysis). Preserved the `gpt-4o` experiment as a one-shot finding in saved results. Lecturer can re-run with `gpt-4o` by flipping `models.judge.name`.
+
+**Decision (rubric tightening):** Sharpened `skills/judge/SKILL.md` from a 2-anchor (0/3 only) rubric to a 4-anchor (0/1/2/3) rubric per dimension. Old rubric scored *presence* ("is the warrant there?"); new rubric scores *quality of explanation* ("is the warrant *explained* in plain language?"). Same five dimensions — Structure/Logos/Pathos/Ethos/Clash — so still PRD §3.3 compliant; we changed the granularity of judgment within each dimension, not the dimension list. Examples added: "claim recited" vs "warrant explained," "one image" vs "image earns its place AND ties back to the claim," "unsourced bluster" vs "named source + recognized institution + measured tone." This addresses the user feedback that the judge should evaluate *how well the agents explain*, not just whether they include the structural template.
+
+**Lesson — three of them:**
+1. **Always control for the judge.** A 4-run measurement that holds the judge constant cannot distinguish "agent prompts are weak" from "judge has model-bias on this dimension." Running the same debate under a different judge is the cheapest possible A/B test for that bias.
+2. **Spec compliance is about the dimensions, not the anchors.** PRD §3.3 fixes the *list* of rubric dimensions; the *anchor language inside each dimension* is free to evolve. We tightened the rubric without breaking the spec by adding granularity (0/1/2/3) instead of new columns.
+3. **A documented "tried it and reverted" experiment is worth more than a quiet config change.** Keeping the `180117` debate in `results/` + a paragraph in the README transforms "we use the cheap judge" from a budget compromise into a measured, defensible design choice.
+
+---
+
+## 2026-05-28 — Bias rebalance iteration 2: Cats ethos skill + HF warning root fix
+
+**Context (rebalance):** Per-dimension diagnostic from `debate_20260528T152815.json` (logged below) pointed to `ethos` (+1.00 Dogs) as the largest unmoved gap after the partial revert. Dogs scores high on ethos because its citations are *named* (AHA, JAMA, Mubanga et al.). Cats' citations were anonymous ("studies show…") which reads as logos, not ethos.
+**Decision (rebalance):** Add `skills/cats/auxiliary/expert_authority.md` — a 6th Cats skill that forces *naming* on every citation. Scaffolds three authority tiers: professional bodies (AVMA, AAFP, International Cat Care, ASPCA, RSPCA), named ethologists (Dr. John Bradshaw, Dr. Mikel Delgado, Dr. Sarah Ellis, Dr. Kristyn Vitale), and journals-as-ethos (*Journal of Veterinary Behavior*, *Animal Cognition*, *Anthrozoös*). Strategic note in the skill explicitly says "name three credible authorities per ping when this skill is in play." Cats now has 6 auxiliary skills vs Dogs' 4.
+**Result (rebalance):** Test `test_load_agent_skills_real_cats_includes_all_six_auxiliary` updated (was `_five_`). Suite 251 still passing. Needs 3–5 measurement runs to confirm the ethos gap closes.
+
+**Context (HF warning):** The `embedder.py` `warnings.filterwarnings` suppression from earlier today only worked in the parent process — the `multiprocessing` worker subprocesses still printed the "unauthenticated requests to the HF Hub" notice on every cold start. Reason: Python's `warnings` filter list is process-local memory; it does not propagate to child interpreters spawned by `multiprocessing.Process`. Env vars do cross that boundary; warning filters don't.
+**Decision (HF warning):** Move the suppression block to `src/debate/__init__.py`. `__init__.py` runs **once per interpreter** — when the parent imports `debate`, when each child process imports it during worker startup, when the test runner imports it. So the filter is re-installed in every Python process that touches the package. The four env vars (`HF_HUB_DISABLE_TELEMETRY=1`, `HF_HUB_DISABLE_PROGRESS_BARS=1`, `TRANSFORMERS_VERBOSITY=error`, `huggingface_hub` logger → ERROR) are also moved here for the same subprocess-coverage reason.
+**Result (HF warning):** Real-run clean stdout. Removed the now-redundant suppression block from `embedder.py` (would have been a no-op anyway). Ruff clean.
+
+**Lesson:** When something runs in worker subprocesses, ask "does this configuration cross the `multiprocessing` boundary?" The rule of thumb: **env vars yes, in-memory Python state (warnings filters, monkey-patches, registered atexit handlers, sys.path mutations) no.** For Python-level state that subprocesses need, the canonical place is the package `__init__.py` — it runs once per interpreter, which means once per parent + once per child. The `embedder.py` placement was the natural intuition but it was wrong by one process boundary.
+
+---
+
+## 2026-05-28 — Bias rebalance partial revert (Dogs pathos quota backfired; 5th Cats skill kept)
+
+**Context:** Ran a single measurement debate immediately after applying the rebalance from the previous entry (`debate_20260528T152815.json`). Per-dimension averages:
+
+| Dimension | Dogs avg | Cats avg | Δ |
+|---|---:|---:|---:|
+| structure | 3.00 | 3.00 | 0 |
+| logos | 3.00 | 2.00 | +1.00 Dogs |
+| pathos | **2.90** | 3.00 | -0.10 |
+| ethos | 3.00 | 2.00 | +1.00 Dogs |
+| clash | 2.70 | 3.00 | +0.30 Cats |
+
+Historical Dogs pathos was ~1.5–2.0. The quota raised it to **2.90** — effectively erasing Cats' only structural dimension advantage. Final: Dogs 146, Cats 130, margin 16 (above historical average ~9). The rebalance made the skew *worse* on n=1.
+
+**Decision:** Revert the Dogs pathos quota. Keep the 5th Cats skill (`empirical_independence`) because it didn't backfire and adds breadth per `hw2_Notes.txt` #15.
+
+**Lesson — the big one:** "Force the opponent to do what you're good at" is **not** a rebalance — it's an *expansion of the opponent's score surface*. The correct rebalance shape is to give the underdog new high-scoring lanes, not to make the leader cover the underdog's lanes too. The next iteration target is a **Cats *ethos* skill** (vet/cognitive-ethologist/ASPCA/AVMA expert authority) because the per-dimension diagnostic now identifies *ethos*, not *pathos*, as Dogs' largest unmoved advantage. Process lesson: always run *one* measurement debate before declaring a rebalance "applied" in the README — n=1 is noise, but n=0 is fiction.
+
+---
+
+## 2026-05-28 — Bias rebalance: 5th Cats skill + Dogs pathos quota (correcting the 74% Dogs skew) — SUPERSEDED
+
+> Pathos quota reverted same day; 5th Cats skill kept. See entry above for the diagnostic and lesson. Original reasoning retained for audit trail.
+
+
+**Context:** Census of 19 saved debates in `results/debates/` showed Dogs winning 14/19 (74%) — a sharp reversal from the early Phase-3 runs where Cats led 2/3. Tracing the change: PR #22's multi-skill stack added 4 auxiliary skills per side, but the *dimension distribution* was asymmetric. Dogs got 3 evidence-shaped skills (`evidence_health`, `evidence_utility`, `evidence_bonding`) feeding `structure` + `logos` + `ethos` (60% of the rubric); Cats got 1 evidence-shaped (`culture_literary`) and 3 in pathos / Socratic / rebuttal lanes. Dogs' totals cluster around 140 every run; Cats' totals swing 112–147 and only win on pathos surges.
+**Goal:** Restore parity without removing skills (would break `hw2_Notes.txt` #15 multi-skill requirement). Two complementary moves on opposite sides.
+**Decision:**
+1. **Add a 5th Cats auxiliary skill — `empirical_independence`** — targeted at logos. Frames cat-cognition (Vitale Shreve attachment styles, Saito name-recognition), cardiovascular research (Qureshi 2009 — 30% lower fatal-CV-event risk), and economic/ecological evidence (Okin 2017 footprint, AVMA care-cost). Closes the citation gap that Dogs has been winning on every round. Cats now has 5 auxiliary skills vs Dogs' 4 — intentional asymmetry to compensate for Dogs' dimension-stacking advantage.
+2. **Add a pathos quota to `skills/dogs/SKILL.md`** — one vivid concrete example per ping (named dog, single-sentence story, or sensory image), placed *after* the warrant so evidence still leads. Mirrors the implicit logos quota Cats already had via citations. Forces Dogs to spend tokens on pathos every round, which previously was a free dimension for Cats.
+**Result:** Updated `test_load_agent_skills_real_cats_includes_all_five_auxiliary` (was `_four_`). Full suite 251 passed, ruff clean. README "Multi-skill personas" table updated to reflect the 4-vs-5 asymmetry with the rationale callout; "Updated result after 19 saved debates" subsection now shows knobs 1+2 as ✅ applied, knobs 3 (per-round opener) + 4 (gpt-4o judge) as ⏳ deferred.
+**Lesson:** When you stack multiple skills per agent, *count the rubric dimensions they target*, not just the file count. We had 4-vs-4 file parity but 3-vs-1 evidence parity — that's the real number. Symmetry of *form* (same count) is not symmetry of *effect* (same rubric coverage). Anytime you grow a multi-skill bundle, also draw the dimension-impact matrix.
+
+---
+
+## 2026-05-28 — Judge JSON robustness (trailing-comma tolerance + repair retry)
+
+**Context:** A real run aborted at Round 1 with `Debate failed: judge failed: JSONDecodeError('Illegal trailing comma before end of object')`. The Judge's `score_ping` used strict `json.loads` on the model reply; one malformed reply killed 20 pings worth of work. Debaters already had a `_repair_prompt` + `_fallback_ping` recovery path; Judge had none.
+**Goal:** Make the Judge's JSON parsing resilient without weakening the rubric semantics.
+**Decision:** Two-layer defense.
+1. `_extract_json` now runs `re.sub(r",\s*([}\]])", r"\1", ...)` before `json.loads` — handles the most common LLM emission glitch (trailing comma) for free.
+2. New `_parse_or_repair(text, schema_hint)` wraps `_extract_json`; on `JSONDecodeError`/`ValueError` it re-prompts the Judge once with "your previous reply was not valid JSON, re-emit one JSON object matching the <schema_hint>." Both `score_ping` and `decide_winner` route through it.
+**Result:** Suite 249 → 251 (two new tests in `test_judge_helpers.py`: trailing-comma tolerance + repair-retry path). Ruff clean. The next real run survives a malformed reply at a cost of one extra Judge call instead of aborting the debate.
+**Lesson:** Symmetry matters. The debater path already had repair (`_repair_prompt`, `_fallback_ping`) because we'd been bitten there before — but we never asked "does the Judge have the same safety net?" A single grep for `json.loads` across all agent files would have surfaced the gap during PR #22. Worth doing periodically: any time you add resilience on one side of a boundary, scan the other side for the same shape.
+
+---
+
+## 2026-05-28 — Reverted Judge to gpt-4o-mini + parallelized evidence collection (speed pass)
+
+**Context:** After PR #22 landed, end-to-end debate wall-clock grew noticeably. Root causes (in impact order): Judge upgraded to `gpt-4o`, larger system prompts from multi-skill personas, and sequential web-search → RAG inside `_collect_evidence`.
+**Goal:** Recover debate speed without weakening graded requirements (multi-skill personas per `hw2_Notes.txt` #15, SecuritySanitizer per `PRD_gatekeeper.md` §9).
+**Decision:**
+1. Revert `config/setup.json` judge model to `gpt-4o-mini` (largest lever — Judge is called on every ping + verdict).
+2. Parallelize search + RAG in `DebateAgent._collect_evidence` using `ThreadPoolExecutor(max_workers=2)`. Both are I/O-bound, gatekeeper is already lock-protected, so concurrent invocation is safe and saves ~1–3s per ping.
+3. Left the SecuritySanitizer and multi-skill loader untouched — measured sanitizer cost is ~10–20ms per ping (negligible vs network latency) and skills are a spec requirement.
+**Result:** Updated `test_sdk_persists_gatekeeper_cost_report_with_judge_calls` to assert single-model cost report (judge + debaters both gpt-4o-mini). Suite 249 passed, ruff clean.
+**Lesson:** Before optimizing, *measure*. The instinct was to attack the sanitizer; the actual hotspots were the slower judge model (config-only fix) and sequential I/O (5-line concurrency fix). Skill prompts feel expensive but are cached by OpenAI prompt-cache and are dominated by the growing message history anyway. Always rank levers by expected impact and graded-risk before changing code.
+
+---
+
+## 2026-05-28 — Stronger Judge model (gpt-4o) for fairness, not web search (SUPERSEDED)
+
+> Reverted same day — see entry above. The reasoning below is retained for the audit trail.
+
 
 **Context:** User asked whether the Judge should also use web search "to be more equal and not distinguish between sides." Real concern was judge fairness, not literal search.
 **Goal:** Reduce judge bias without adding the failure modes web-search would introduce (non-reproducible scoring, opinion-blog contamination from public web, doubled per-debate cost for no rubric quality gain, and contradiction with PRD §3.4 "applies rubric mechanically").
 **Decision:** Switch only the Judge to a stronger model (`gpt-4o` from `gpt-4o-mini`) while keeping the debaters on `gpt-4o-mini`. The rubric prompt stays identical — what changes is the reasoning capacity behind the rubric application. Documented this as the chosen mitigation for the persona-leak gap that the cross-debate analysis already identified (Cats +1.00 pathos, Dogs +0.45 logos / +0.55 ethos).
 **Result:** One-line config change in `config/setup.json`. One test updated (`test_sdk_persists_gatekeeper_cost_report_with_judge_calls` now asserts both model keys present + total token count, rather than pinning gpt-4o-mini token counts). Suite at 249 / 92.79% coverage, ruff clean. Expected per-debate cost moves from ~$0.04 → ~$0.10–0.15; still <3% of the $5.00 budget.
 **Lesson:** When a fairness concern surfaces, list every plausible intervention before picking one — "give it more tools" feels intuitive but often makes things worse (non-determinism, contamination). The right move is usually to upgrade the existing pipeline at its weakest reasoning link, not to add a new external dependency. Also: kept search/RAG off the Judge to stay aligned with PRD §3.4 and `hw2_Notes.txt` note #14 (the "minimum 1 tool: web search" requirement is for *the debaters*, not the judge).
+
+---
+
+## 2026-05-29 — Judge strictness mandate
+
+**Context:** Even after blinding `score_ping` to the side label, dogs still hit 140 in 2 of 3 verification runs. The user observed: *"the judge most of times gives 13 points on every single prompt — tell him to be more strict and he shouldn't be nice like this."* Per-ping inspection confirmed: 288 of 310 prior dogs pings landed at exactly `3-3-2-3-3 = 14`. The rubric anchors made 3 the default rather than the ceiling.
+**Goal:** Recalibrate the judge so a 3 is exceptional, not default; force per-ping totals into a real distribution instead of clustering at 13-14.
+**Changes to `skills/judge/SKILL.md`:**
+  1. New "Strictness mandate" preamble: *"You are a demanding judge, not a generous one. The default per-dimension score is 1, not 3. A typical ping should total 6–10 out of 15, not 13–15. Score inflation is the failure mode to avoid."*
+  2. Each anchor column relabelled: `Score 1 (default) / Score 2 (solid) / Score 3 (rare, exceptional)`.
+  3. The bar for 3 was raised concretely on every dimension. Example — ethos was: *"named source + recognized institution + measured tone"*. Now: *"named source + recognized institution + tone that **concedes a minor sub-point of the opponent** without conceding the thesis."* That last clause is the gate — it requires *demonstrated* fair-mindedness, not claimed neutrality, which a logos-only persona almost never shows.
+  4. New "Calibration check" footer: *"Before submitting your score, look at the totals. If you scored 13 or higher, re-read the ping and ask: was this truly exceptional on at least three dimensions, or did you reflexively give 3s? Downgrade unjustified 3s to 2s."*
+
+**Empirical result (2 debates, gpt-4o-mini judge):**
+  - `debate_20260528T215228.json` — winner=**cats 138-128**, margin 10. Dogs ethos avg dropped 2.99 → **2.0** (the new "needs concession" anchor for 3 was visibly enforced — no dogs ping conceded anything to cats). Dogs per-ping totals: `[11, 13, 13, 13, 13, 13, 13, 13, 13, 13]` — the 11 is genuinely new.
+  - `debate_20260528T215826.json` — winner=**dogs 137-119**, margin 18. Cats structure avg dropped 2.91 → **2.0**, cats ethos dropped 2.36 → **1.9**. Cats per-ping totals: `[11, 12, 12, 12, 12, 12, 12, 12, 12, 12]`.
+  - Dogs total: **neither debate hit 140.** First non-fluke break of the 77% lock.
+  - Winner split 1-1; margins 10 and 18 (vs typical 3-7 pre-fix) — judge is differentiating, not rubber-stamping.
+
+**Lesson:** Rubric anchors that describe a "good" example as 3 will be read as the default. To prevent score inflation, the anchors must *name* the default explicitly (here: 1) and the maximum must require something that average performance cannot supply (here: explicit concession of a sub-point for ethos 3). A "be strict" instruction without rewriting the anchors would have been ignored. A "be strict" instruction *plus* rewritten anchors *plus* a post-score calibration check is what actually moves behavior — defense in depth, just like the concession/tie-break overrides.
+
+---
+
+## 2026-05-28 — Judge persona-leak: blinding score_ping to the side label
+
+**Context:** Cross-debate analysis across the 30 saved debates showed `dogs_total = exactly 140` in 23 of them (77%). Per-dim breakdown revealed why: dogs scored `3-3-2-3-3` in 288 of 310 pings (98%), and cats scored roughly `3-2-3-2-3`. The judge wasn't grading argument quality — it was applying a near-deterministic per-persona score template that mapped 1:1 to the personas' rhetorical styles. Dogs wins 25/30 (83%) because the rubric arithmetic favors the logos template (14/ping) over the pathos template (13/ping) by exactly the right margin.
+**Goal:** Remove the most defensible bias channel: the explicit `side` label the judge sees on every per-ping scoring call.
+**Original prompt (`judge_agent.score_ping`):**
+> `Score this ping (round {ping.round}, side {ping.side}):\n\n{ping.text}\n\nReply with ONE JSON object matching the per-ping rubric schema.`
+
+**New prompt:**
+> `Score this ping (round {ping.round}):\n\n{ping.text}\n\nScore the rubric dimensions on the merits of THIS ping alone. Do not anchor on which side authored it or on the side's expected rhetorical style — score what is actually on the page.\nReply with ONE JSON object matching the per-ping rubric schema.`
+
+The `Score.side` field is still populated deterministically in code from `ping.side` after the LLM responds, so downstream aggregation (`decide_winner`, the tie-break, the verdict) is unaffected.
+**Empirical result (3 post-fix debates):**
+  - Run 1 (`debate_20260528T203256.json`): dogs 140, cats 137 — same flat pattern.
+  - Run 2 (`debate_20260528T203858.json`): dogs 140, cats 129 — same flat pattern.
+  - Run 3 (`debate_20260528T204425.json`): **dogs 136, cats 147 — cats wins.** Dogs pathos dropped to 1.6 (first sub-2.0 value across 33 debates), cats logos rose to 2.8, cats ethos rose to 2.9.
+
+**Lesson:** Blinding the judge to the side label is necessary but not sufficient. The deeper bias is structural — the ping *content* signals the persona (study-heavy prose vs. vivid imagery), and the rubric arithmetic favors a logos-shaped persona by ~10 pts per debate. Three small runs are too few to claim a statistically meaningful shift, but the fact that **the judge is now *capable* of grading dogs below 140 at all** (which it essentially never did before) shows the label was contributing. Fix kept; structural bias documented as a known limitation rather than chased further (would require rebalancing the rubric, which would invalidate the 30 prior runs' evidence).
+
+---
+
+## 2026-05-28 — Tie-break rationale consistency
+
+**Context:** A deep audit caught a real defect in `debate_20260528T180117.json`: tied 140-140, tie-break correctly picked `cats` (cats pathos 30 > dogs 20), but the LLM-authored `written_rationale` claimed pathos *"favored dogs slightly"* and concluded *"dogs as having a slight edge"* — directly contradicting the recorded winner.
+**Goal:** Make the persisted `written_rationale` impossible to disagree with the verdict.
+**Root cause:** `JudgeAgent.decide_winner` let the LLM author `winner`/`margin`/`written_rationale` first, then mechanically overrode `winner` and `margin` via `_tie_break()` — but the rationale text was left untouched. The LLM had no way to know which side the deterministic cascade would pick.
+**Fix:**
+  1. Extracted pure helpers into `src/debate/services/agents/_judge_helpers.py` (also restored LOC headroom: `judge_agent.py` 143 → 120).
+  2. `tie_break(scores)` now returns `(winner, explanation)` — a single source of truth that knows *which dimension* and *what cumulative totals* drove the decision.
+  3. When the tie-break fires, `decide_winner` prepends the deterministic explanation to `written_rationale` so the human-readable text leads with the actual reason (e.g. *"Tie-break applied: totals were tied, so cats wins on higher cumulative Pathos (30 vs 20)."*) before the LLM's narrative.
+**Lesson:** Same pattern as the existing concession heuristic and the "no ties" rule — **the prompt asks; the code enforces.** Anywhere a deterministic override can rewrite an LLM-authored field, also rewrite the *human-facing* fields the LLM authored about it, or the artifact will contradict itself the moment the override fires. The audit only caught this because it spot-checked a margin=0 case; without the tie-break being exercised, the contradiction was latent.
 
 ---
 

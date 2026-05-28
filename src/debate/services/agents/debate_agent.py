@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
@@ -64,15 +65,27 @@ class DebateAgent(BaseAgent):
         """Persona-specific query phrasing (e.g., Dogs adds 'study'/'research')."""
 
     def _collect_evidence(self, query: str) -> dict[str, list]:
-        """Gather web-search hits + RAG passages; all untrusted text is
+        """Gather web-search hits + RAG passages in parallel; all untrusted text is
         sanitized before it can reach the agent's prompt (see security.py)."""
         evidence: dict[str, list] = {"search": [], "rag": [], "research_cards": []}
-        if self.search_tool is not None:
+
+        def _search() -> list:
+            if self.search_tool is None:
+                return []
             hits = self.search_tool.search(query, max_results=self.search_max_results)
-            evidence["search"] = sanitize_hits(hits, self.sanitizer)
-        if self.rag is not None:
+            return sanitize_hits(hits, self.sanitizer)
+
+        def _rag() -> list:
+            if self.rag is None:
+                return []
             passages = self.rag.retrieve(query, k=self.rag_k)
-            evidence["rag"] = sanitize_passages(passages, self.sanitizer)
+            return sanitize_passages(passages, self.sanitizer)
+
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            search_fut = ex.submit(_search)
+            rag_fut = ex.submit(_rag)
+            evidence["search"] = search_fut.result()
+            evidence["rag"] = rag_fut.result()
         evidence["research_cards"] = [
             card.model_dump() for card in build_research_cards(self.side, evidence)
         ]
@@ -106,10 +119,16 @@ class DebateAgent(BaseAgent):
                 ping = parse_ping_json(response.text, side=self.side, round_=envelope.round)
             except PingParseError:
                 ping = self._fallback_ping(response.text, envelope.round, envelope.previous_ping)
-        # Defensive: smaller models sometimes omit `refers_to_ping` even when
-        # the prompt asks for it. Auto-fill from envelope context — the
-        # Judge's `clash` dimension separately scores rhetorical engagement.
-        if ping.refers_to_ping is None and envelope.previous_ping is not None:
+        # Defensive: smaller models sometimes omit `refers_to_ping` OR return a
+        # wrong round number (off-by-one hallucinations seen in late rounds).
+        # The structural field is unambiguous from envelope context — auto-fix
+        # both shapes to envelope.previous_ping.round. The Judge's `clash`
+        # dimension separately scores rhetorical engagement, so this only
+        # corrects the bookkeeping, not the substantive clash quality.
+        if (
+            envelope.previous_ping is not None
+            and ping.refers_to_ping != envelope.previous_ping.round
+        ):
             ping = ping.model_copy(update={"refers_to_ping": envelope.previous_ping.round})
         validate_clash(ping, envelope.previous_ping)
         ping.tokens_in = response.input_tokens

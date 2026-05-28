@@ -121,6 +121,29 @@ def test_extract_json_missing_raises() -> None:
         JudgeAgent._extract_json("plain text only")
 
 
+def test_extract_json_tolerates_trailing_commas() -> None:
+    """LLMs frequently emit `,\n}` — strict json.loads rejects it, which
+    used to abort a 20-ping debate over one bad reply. See debate_agent
+    repair-prompt for the symmetric debater-side fix."""
+    raw = '{"structure":2,"logos":2,"pathos":2,"ethos":2,"clash":2,"rationale":"ok",}'
+    assert JudgeAgent._extract_json(raw)["structure"] == 2
+
+
+def test_parse_or_repair_retries_on_invalid_json() -> None:
+    """First reply is unparseable garbage; judge re-prompts once and the retry
+    returns clean JSON. Without this path, one malformed reply kills the run."""
+    j = _judge("not json at all")
+    j.provider.complete.return_value = CompletionResponse(
+        text='{"structure":1,"logos":1,"pathos":1,"ethos":1,"clash":1,"rationale":"r"}',
+        input_tokens=1,
+        output_tokens=1,
+        model="m",
+        provider="anthropic",
+    )
+    payload = j._parse_or_repair("garbage with no braces", "per-ping rubric schema")
+    assert payload["structure"] == 1
+
+
 def test_concession_forces_clash_zero() -> None:
     j = _judge('{"structure":2,"logos":2,"pathos":2,"ethos":2,"clash":3,"rationale":"x"}')
     s = j.score_ping(_ping(text="You make a good point and dogs are loyal."))

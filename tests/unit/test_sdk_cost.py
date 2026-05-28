@@ -62,9 +62,10 @@ def test_sdk_persists_gatekeeper_cost_report_with_judge_calls(tmp_path: Path):
     result = sdk.run_debate()
     report = result.cost_report
     assert report["total_usd"] > 0
-    # Judge runs on gpt-4o (config default since 2026-05-28); debaters on gpt-4o-mini.
-    # Total input tokens across both models = 25 (5 per call × 5 calls in a 1-round debate).
+    # All three agents run on gpt-4o-mini. We briefly tried gpt-4o for the judge
+    # on 2026-05-28 (it closed the logos gap in the rebalance experiment — see
+    # debate_20260528T180117.json) but reverted for cost + speed and kept the
+    # finding as a documented one-shot fairness experiment.
     total_input = sum(m["input_tokens"] for m in report["by_model"].values())
     assert total_input == 25
-    assert "openai/gpt-4o" in report["by_model"]
     assert "openai/gpt-4o-mini" in report["by_model"]

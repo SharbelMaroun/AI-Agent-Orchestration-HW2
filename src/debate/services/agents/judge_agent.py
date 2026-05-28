@@ -9,21 +9,18 @@ import re
 from pathlib import Path
 from typing import Any
 
+from debate.services.agents._judge_helpers import (
+    detect_collusion,
+    extract_key_points,
+    is_concession,
+    tie_break,
+)
 from debate.services.agents.base_agent import BaseAgent
 from debate.shared.schemas import Ping, Score, Side, Verdict
 from debate.shared.skill_loader import load_skill
 
 DEFAULT_SKILL_PATH = Path("skills/judge")
 _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
-_CONCESSION_PHRASES = (
-    "good point",
-    "fair enough",
-    "i agree",
-    "you're right",
-    "i concede",
-    "valid point",
-    "you make a good",
-)
 
 
 class FinalizeRequest:
@@ -52,13 +49,16 @@ class JudgeAgent(BaseAgent):
 
     def score_ping(self, ping: Ping) -> Score:
         prompt = (
-            f"Score this ping (round {ping.round}, side {ping.side}):\n\n"
+            f"Score this ping (round {ping.round}):\n\n"
             f"{ping.text}\n\n"
+            "Score the rubric dimensions on the merits of THIS ping alone. "
+            "Do not anchor on which side authored it or on the side's "
+            "expected rhetorical style — score what is actually on the page.\n"
             "Reply with ONE JSON object matching the per-ping rubric schema."
         )
         response = self.generate(prompt)
-        payload = self._extract_json(response.text)
-        if self._is_concession(ping.text):
+        payload = self._parse_or_repair(response.text, "per-ping rubric schema")
+        if is_concession(ping.text):
             payload["clash"] = 0
         payload.update({"ping_round": ping.round, "side": ping.side})
         score = Score.model_validate(payload)
@@ -74,15 +74,20 @@ class JudgeAgent(BaseAgent):
             "Deliver the verdict as ONE JSON object."
         )
         response = self.generate(prompt)
-        payload = self._extract_json(response.text)
+        payload = self._parse_or_repair(response.text, "final verdict schema")
         payload["dogs_total"] = dogs_total
         payload["cats_total"] = cats_total
         payload["margin"] = abs(dogs_total - cats_total)
         if dogs_total == cats_total:
-            payload["winner"] = self._tie_break()
+            winner, explanation = tie_break(self.scores)
+            payload["winner"] = winner
             payload["margin"] = 0
-        payload.setdefault("key_points_dogs", self._extract_key_points(pings, "dogs"))
-        payload.setdefault("key_points_cats", self._extract_key_points(pings, "cats"))
+            llm_rationale = (payload.get("written_rationale") or "").strip()
+            payload["written_rationale"] = (
+                f"{explanation} {llm_rationale}".strip() if llm_rationale else explanation
+            )
+        payload.setdefault("key_points_dogs", extract_key_points(pings, "dogs"))
+        payload.setdefault("key_points_cats", extract_key_points(pings, "cats"))
         return Verdict.model_validate(payload)
 
     def receive(self, envelope: object) -> Score | Verdict | None:
@@ -93,54 +98,46 @@ class JudgeAgent(BaseAgent):
         return None
 
     def _tie_break(self) -> Side:
-        """Per PRD §6: highest cumulative clash, then pathos, then dogs by
-        default convention (Dogs opens, so the tie-break tie is assigned to
-        the opener — not an editorial preference)."""
-        dogs_clash = sum(s.clash for s in self.scores if s.side == "dogs")
-        cats_clash = sum(s.clash for s in self.scores if s.side == "cats")
-        if dogs_clash != cats_clash:
-            return "dogs" if dogs_clash > cats_clash else "cats"
-        dogs_pathos = sum(s.pathos for s in self.scores if s.side == "dogs")
-        cats_pathos = sum(s.pathos for s in self.scores if s.side == "cats")
-        if dogs_pathos != cats_pathos:
-            return "dogs" if dogs_pathos > cats_pathos else "cats"
-        return "dogs"
+        """Back-compat shim — delegates to the helper module so existing
+        tests that reach into `JudgeAgent._tie_break()` keep working."""
+        return tie_break(self.scores)[0]
+
+    @staticmethod
+    def _is_concession(text: str) -> bool:
+        return is_concession(text)
+
+    @staticmethod
+    def _detect_collusion(recent_pings: list[Ping], window: int = 3) -> bool:
+        return detect_collusion(recent_pings, window)
+
+    @staticmethod
+    def _extract_key_points(pings: list[Ping], side: Side, k: int = 3) -> list[str]:
+        return extract_key_points(pings, side, k)
 
     @staticmethod
     def _total(score: Score) -> int:
         return score.structure + score.logos + score.pathos + score.ethos + score.clash
 
     @staticmethod
-    def _is_concession(text: str) -> bool:
-        low = text.lower()
-        return any(phrase in low for phrase in _CONCESSION_PHRASES)
-
-    @staticmethod
-    def _detect_collusion(recent_pings: list[Ping], window: int = 3) -> bool:
-        """Three consecutive concessions = collusion warning."""
-        if len(recent_pings) < window:
-            return False
-        tail = recent_pings[-window:]
-        return all(JudgeAgent._is_concession(p.text) for p in tail)
-
-    @staticmethod
-    def _extract_key_points(pings: list[Ping], side: Side, k: int = 3) -> list[str]:
-        """Fallback if the LLM verdict didn't supply them — take the first
-        sentence of the top-k pings for the side."""
-        out: list[str] = []
-        for p in pings:
-            if p.side != side:
-                continue
-            first = p.text.split(".")[0].strip()
-            if first:
-                out.append(first[:80])
-            if len(out) >= k:
-                break
-        return out
-
-    @staticmethod
     def _extract_json(text: str) -> dict:
         match = _JSON_BLOCK_RE.search(text)
         if not match:
             raise ValueError("no JSON in judge reply")
-        return json.loads(match.group(0))
+        cleaned = re.sub(r",\s*([}\]])", r"\1", match.group(0))
+        return json.loads(cleaned)
+
+    def _parse_or_repair(self, text: str, schema_hint: str) -> dict:
+        """Strict parse first; on failure, ask the LLM to re-emit valid JSON once.
+        Trailing-comma tolerance is in `_extract_json`; this layer catches deeper
+        malformations (missing braces, unquoted keys) that would otherwise abort
+        a 20-ping debate over a single bad reply."""
+        try:
+            return self._extract_json(text)
+        except (json.JSONDecodeError, ValueError):
+            repair_prompt = (
+                f"Your previous reply was not valid JSON. Re-emit ONE JSON object "
+                f"matching the {schema_hint}. No prose outside JSON. "
+                f"Previous reply:\n{text}"
+            )
+            retry = self.generate(repair_prompt)
+            return self._extract_json(retry.text)

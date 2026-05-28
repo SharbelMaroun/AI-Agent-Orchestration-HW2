@@ -7,9 +7,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
-from debate.services.agents.debate_agent import ClashViolationError
 from debate.shared.schemas import CompletionResponse, OpeningBrief, Ping, YourTurn
 from tests.unit._debate_agent_test_helpers import agent, opponent_ping
 
@@ -94,11 +91,15 @@ def test_handle_your_turn_wraps_failed_repair_as_ping():
     assert ping.refers_to_ping == 1
 
 
-def test_handle_your_turn_wrong_refers_to_ping_still_raises():
-    """A wrong round number is a real clash violation — must still raise."""
+def test_handle_your_turn_wrong_refers_to_ping_is_autocorrected():
+    """Off-by-one hallucinations (e.g. model returns 8 in round 10 instead
+    of 9) used to abort the whole debate. Since 2026-05-28 the agent silently
+    overwrites any non-matching `refers_to_ping` with envelope.previous_ping.round;
+    the structural field is unambiguous from envelope context, and the Judge's
+    `clash` dimension separately scores rhetorical engagement."""
     a = agent(llm_text='{"text": "bad", "citations": [], "refers_to_ping": 99}')
-    with pytest.raises(ClashViolationError):
-        a.handle_your_turn(YourTurn(round=2, previous_ping=opponent_ping(round_=1)))
+    ping = a.handle_your_turn(YourTurn(round=2, previous_ping=opponent_ping(round_=1)))
+    assert ping.refers_to_ping == 1
 
 
 def test_receive_opening_brief_stashes_it():
