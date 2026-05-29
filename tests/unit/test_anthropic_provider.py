@@ -71,3 +71,20 @@ def test_anthropic_marks_cache_on_system_and_first_user(monkeypatch):
     second_user = kwargs["messages"][2]
     assert second_user["role"] == "user"
     assert isinstance(second_user["content"], str)
+
+
+def test_anthropic_forwards_timeout(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    with patch("anthropic.Anthropic") as mock_cls:
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = _fake_response()
+        mock_cls.return_value = mock_client
+        AnthropicProvider().complete(
+            system="S", messages=_msgs(), model="claude-haiku-4-5-20251001", timeout=30.0
+        )
+        AnthropicProvider().complete(
+            system="S", messages=_msgs(), model="claude-haiku-4-5-20251001"
+        )
+    calls = mock_client.messages.create.call_args_list
+    assert calls[0].kwargs["timeout"] == 30.0
+    assert "timeout" not in calls[1].kwargs  # omitted when None

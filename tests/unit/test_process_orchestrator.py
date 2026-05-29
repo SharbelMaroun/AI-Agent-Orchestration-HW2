@@ -78,10 +78,14 @@ def test_process_orchestrator_runs_with_queue_runtime(monkeypatch, tmp_path):
     assert result.cost_report["total_usd"] == 1.0
     assert [kind for kind, _payload in events] == [
         "announcement",
+        "debate_start",
+        "round_start",
         "ping",
         "score",
         "ping",
         "score",
+        "round_end",
         "verdict",
+        "debate_end",
     ]
     assert list(tmp_path.glob("debate_*.json"))

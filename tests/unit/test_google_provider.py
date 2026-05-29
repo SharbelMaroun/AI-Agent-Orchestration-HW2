@@ -129,3 +129,16 @@ def test_google_handles_missing_usage_metadata(monkeypatch) -> None:
     )
     assert resp.input_tokens == 0
     assert resp.output_tokens == 0
+
+
+def test_google_forwards_timeout(monkeypatch) -> None:
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
+    fake = _install_fake_genai(monkeypatch, _fake_response())
+    GoogleProvider().complete(
+        system="s",
+        messages=[ChatMessage(role="user", content="x")],
+        model="gemini-2.5-flash",
+        timeout=15.0,
+    )
+    call = fake.GenerativeModel.return_value.generate_content.call_args
+    assert call.kwargs["request_options"] == {"timeout": 15.0}

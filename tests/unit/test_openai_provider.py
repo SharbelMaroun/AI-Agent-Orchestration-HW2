@@ -68,3 +68,21 @@ def test_openai_prepends_system_message(monkeypatch, fake_openai_module):
     sent = mock_client.chat.completions.create.call_args.kwargs["messages"]
     assert sent[0] == {"role": "system", "content": "be brief"}
     assert sent[1] == {"role": "user", "content": "hello"}
+
+
+def test_openai_forwards_timeout(monkeypatch, fake_openai_module):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = _fake_response()
+    fake_openai_module.OpenAI.return_value = mock_client
+    OpenAIProvider().complete(system="S", messages=_msgs(), model="gpt-4o-mini", timeout=42.0)
+    assert mock_client.chat.completions.create.call_args.kwargs["timeout"] == 42.0
+
+
+def test_openai_omits_timeout_when_none(monkeypatch, fake_openai_module):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = _fake_response()
+    fake_openai_module.OpenAI.return_value = mock_client
+    OpenAIProvider().complete(system="S", messages=_msgs(), model="gpt-4o-mini")
+    assert "timeout" not in mock_client.chat.completions.create.call_args.kwargs

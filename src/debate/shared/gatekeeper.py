@@ -18,6 +18,7 @@ from typing import Any
 
 from .config import RateLimitConfig, SetupConfig
 from .cost_recorder import CostRecorder
+from .middleware import Middleware, compose
 from .rate_limiter import (
     ApiCallFailedError,
     BudgetExceededError,
@@ -31,6 +32,7 @@ __all__ = [
     "ApiCallFailedError",
     "ApiGatekeeper",
     "BudgetExceededError",
+    "Middleware",
     "QueueFullError",
     "QueueStatus",
 ]
@@ -46,11 +48,15 @@ class ApiGatekeeper:
         logger: logging.Logger,
         cost_logger: logging.Logger | None = None,
         sleep_fn: Callable[[float], None] = time.sleep,
+        middlewares: list[Middleware] | None = None,
     ) -> None:
         self.rate_config = rate_config
         self.setup = setup
         self.logger = logger
         self._sleep = sleep_fn
+        # Cross-cutting extension point: each middleware wraps every api_call.
+        # Empty by default → zero overhead, identical behavior. See middleware.py.
+        self._middlewares = list(middlewares or [])
         self.recorder = CostRecorder(setup, rate_config, logger, cost_logger)
         self._services: dict[str, ServiceState] = {
             name: ServiceState(lim) for name, lim in rate_config.services.items()
@@ -89,16 +95,24 @@ class ApiGatekeeper:
     def execute(
         self, api_call: Callable[..., Any], *args: Any, service: str = "default", **kwargs: Any
     ) -> Any:
+        """Run ``api_call(*args, **kwargs)`` through the gatekeeper.
+
+        Blocks for a rate-limit slot (FIFO; raises ``QueueFullError`` past the
+        configured depth), then retries transient failures with linear backoff.
+        On success records token usage + cost (enforcing the budget). ``service``
+        selects the per-service limit bucket. Returns the call's result.
+        """
         st = self._state(service)
         self._wait_for_slot(st)
         last_exc: BaseException | None = None
+        call = compose(self._middlewares, api_call)  # no-op when no middlewares
         with st.semaphore:
             with st.lock:
                 st.in_flight += 1
             try:
                 for attempt in range(1, st.limit.max_retries + 2):
                     try:
-                        result = api_call(*args, **kwargs)
+                        result = call(*args, **kwargs)
                     except Exception as e:
                         last_exc = e
                         if not is_retryable(e, st.limit.retryable_status_codes):

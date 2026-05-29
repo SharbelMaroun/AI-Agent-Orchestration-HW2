@@ -5,9 +5,9 @@ replies, clash validation, user-prompt assembly. Extracted so
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime, timezone
 
+from debate.services.agents._json_block import JSON_BLOCK_RE
 from debate.shared.schemas import Ping, Side
 from debate.shared.security import SecuritySanitizer
 
@@ -33,9 +33,6 @@ def sanitize_passages(passages, sanitizer: SecuritySanitizer):
     return [sanitize_rag_passage(p, sanitizer) for p in passages]
 
 
-_JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
-
-
 class ClashViolationError(ValueError):
     """Ping past round 1 must clash with the opponent's previous ping."""
 
@@ -47,7 +44,7 @@ class PingParseError(ValueError):
 def parse_ping_json(text: str, *, side: Side, round_: int) -> Ping:
     """Extract the first JSON object from the LLM reply and validate it.
     Tolerates prose around the JSON block so a polite preface doesn't crash."""
-    match = _JSON_BLOCK_RE.search(text)
+    match = JSON_BLOCK_RE.search(text)
     if not match:
         raise PingParseError("no JSON object found in LLM reply")
     try:

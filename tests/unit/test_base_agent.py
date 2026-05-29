@@ -42,7 +42,7 @@ def _fake_response(text="reply", tin=10, tout=20):
     )
 
 
-def _build_agent(provider=None, gatekeeper=None):
+def _build_agent(provider=None, gatekeeper=None, request_timeout=None):
     if provider is None:
         provider = MagicMock()
         provider.complete = MagicMock(return_value=_fake_response())
@@ -52,6 +52,7 @@ def _build_agent(provider=None, gatekeeper=None):
         provider=provider,
         gatekeeper=gatekeeper or _passthrough_gatekeeper(),
         model_name="claude-haiku",
+        request_timeout=request_timeout,
     )
 
 
@@ -69,12 +70,11 @@ def test_generate_routes_through_gatekeeper():
     gk = _passthrough_gatekeeper()
     provider = MagicMock()
     provider.complete = MagicMock(return_value=_fake_response("woof"))
-    agent = _build_agent(provider=provider, gatekeeper=gk)
+    agent = _build_agent(provider=provider, gatekeeper=gk, request_timeout=7.0)
 
     resp = agent.generate("Make your opening argument.")
 
     assert resp.text == "woof"
-    # Gatekeeper saw the call; provider was invoked via the gatekeeper, not directly.
     gk.execute.assert_called_once()
     called_fn = gk.execute.call_args.args[0]
     assert called_fn is provider.complete
@@ -82,6 +82,7 @@ def test_generate_routes_through_gatekeeper():
     assert kwargs["system"] == "be brief"
     assert kwargs["model"] == "claude-haiku"
     assert kwargs["service"] == "default"
+    assert kwargs["timeout"] == 7.0  # configured request_timeout forwarded to provider
     # History now has user + assistant turn.
     assert [m.role for m in agent.history] == ["user", "assistant"]
     assert agent.history[-1].content == "woof"

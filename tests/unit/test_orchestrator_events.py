@@ -13,7 +13,8 @@ from tests.unit._orchestrator_fixtures import mock_agent, mock_judge
 
 
 def test_on_event_streams_pings_scores_and_verdict(tmp_path: Path):
-    """Event order: announcement → (ping, score) × 4 → verdict (for 2 rounds)."""
+    """Event stream: announcement → debate_start → per round
+    (round_start → (ping, score)×2 → round_end) → verdict → debate_end."""
     events: list[tuple[str, object]] = []
     orch = Orchestrator(
         topic="t",
@@ -28,7 +29,13 @@ def test_on_event_streams_pings_scores_and_verdict(tmp_path: Path):
     assert kinds.count("score") == 4
     assert kinds.count("verdict") == 1
     assert kinds.count("announcement") == 1
-    assert kinds[-1] == "verdict"
+    # Lifecycle hook points (CLAUDE.md §19 extension points).
+    assert kinds.count("debate_start") == 1
+    assert kinds.count("debate_end") == 1
+    assert kinds.count("round_start") == 2  # one per round
+    assert kinds.count("round_end") == 2
+    assert kinds[0] == "announcement"
+    assert kinds[-1] == "debate_end"  # debate_end is the final event
     # Each ping is followed by its score for the same side.
     for i, (k, payload) in enumerate(events[:-1]):
         if k != "ping":

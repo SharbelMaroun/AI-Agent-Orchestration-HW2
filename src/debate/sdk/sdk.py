@@ -15,6 +15,12 @@ from pathlib import Path
 from typing import Any
 
 from debate.sdk.sync_runner import run_sync_debate
+from debate.services.analysis import (
+    EmpiricalStats,
+    SensitivityReport,
+    build_report,
+)
+from debate.services.analysis import empirical_summary as _empirical_summary
 from debate.services.process_orchestrator import ProcessOrchestrator
 from debate.shared.config import (
     SetupConfig,
@@ -87,6 +93,14 @@ class DebateSDK:
         on_event: Callable[[str, Any], None] | None = None,
         coin_flip: Callable[[], int] | None = None,
     ) -> DebateResult:
+        """Run one full debate end-to-end and persist the result.
+
+        Uses the process orchestrator by default (`use_processes=True`); the
+        in-process runner otherwise. ``topic`` overrides the configured topic;
+        ``on_event`` receives ``(kind, payload)`` callbacks for live streaming;
+        ``coin_flip`` injects the opener decision (testing). Returns the
+        persisted ``DebateResult`` (also cached as ``last_result``).
+        """
         cfg = self.setup
         if hasattr(self.gatekeeper, "reset_costs"):
             self.gatekeeper.reset_costs()
@@ -135,6 +149,18 @@ class DebateSDK:
             if report.get("by_model"):
                 return report
         return fallback
+
+    def run_sensitivity_analysis(self, metric: str = "cost_usd") -> SensitivityReport:
+        """Run the OAT parameter-sensitivity study (analytical, zero API cost).
+
+        Sweeps the factors in ``config/setup.json -> analysis`` one at a time
+        and returns a tornado-ranked report. See docs/PRD_sensitivity.md.
+        """
+        return build_report(self.setup, metric)
+
+    def empirical_summary(self) -> EmpiricalStats:
+        """Outcome + score distributions over every recorded debate JSON."""
+        return _empirical_summary(self.results_dir)
 
     def list_past_debates(self) -> list[Path]:
         if not self.results_dir.exists():

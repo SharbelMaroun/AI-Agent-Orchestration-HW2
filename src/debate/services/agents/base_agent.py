@@ -41,6 +41,7 @@ class BaseAgent(ABC):
         model_name: str,
         logger: logging.Logger | None = None,
         max_tokens: int = 1024,
+        request_timeout: float | None = None,
     ) -> None:
         self.agent_id = agent_id
         self.system_prompt = system_prompt
@@ -48,6 +49,10 @@ class BaseAgent(ABC):
         self.gatekeeper = gatekeeper
         self.model_name = model_name
         self.max_tokens = max_tokens
+        # Per-LLM-call wall-clock limit (seconds). Wired from
+        # setup.timeouts.agent_response_seconds; kept below the watchdog's
+        # kill_after so the call times out before the process is killed.
+        self.request_timeout = request_timeout
         self.logger = logger or logging.getLogger(f"agent.{agent_id}")
         self.history: list[ChatMessage] = []
 
@@ -68,6 +73,7 @@ class BaseAgent(ABC):
             messages=list(self.history),
             model=self.model_name,
             max_tokens=self.max_tokens,
+            timeout=self.request_timeout,
             service="default",
         )
         self._append_assistant(response.text)

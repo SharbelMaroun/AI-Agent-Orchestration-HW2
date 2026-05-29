@@ -27,8 +27,8 @@ def fake_provider_factory(side_to_reply: dict[str, str] | None = None):
     def factory(provider_name: str):
         provider = MagicMock()
 
-        def complete(*, system, messages, model, max_tokens):
-            del max_tokens
+        def complete(*, system, messages, model, max_tokens, timeout=None):
+            del max_tokens, timeout
             last_user = messages[-1].content if messages else ""
             low = last_user.lower()
             if "final scores" in low or "deliver the verdict" in low:
