@@ -1,0 +1,228 @@
+{
+  "metric": "cost_usd",
+  "baseline": {
+    "num_rounds": 10,
+    "max_words_per_ping": 250,
+    "model": "openai/gpt-4o-mini",
+    "cache_read_pct": 0.0
+  },
+  "baseline_metrics": {
+    "cost_usd": 0.06627855,
+    "total_tokens": 409550.0,
+    "input_tokens": 398781.0,
+    "output_tokens": 10769.0,
+    "llm_calls": 41.0
+  },
+  "factors": [
+    {
+      "factor": "model",
+      "metric": "cost_usd",
+      "baseline_value": 0.06627855,
+      "points": [
+        {
+          "level": "openai/gpt-4o-mini",
+          "metrics": {
+            "cost_usd": 0.06627855,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": "openai/gpt-4o",
+          "metrics": {
+            "cost_usd": 1.1046425000000002,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": "anthropic/claude-haiku-4-5-20251001",
+          "metrics": {
+            "cost_usd": 0.36210080000000006,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": "google/gemini-2.5-flash",
+          "metrics": {
+            "cost_usd": 0.1465568,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        }
+      ],
+      "elasticity": null,
+      "metric_range": 1.0383639500000001,
+      "metric_cv": 0.9761286778128538
+    },
+    {
+      "factor": "num_rounds",
+      "metric": "cost_usd",
+      "baseline_value": 0.06627855,
+      "points": [
+        {
+          "level": 5,
+          "metrics": {
+            "cost_usd": 0.0209229,
+            "total_tokens": 123334.0,
+            "input_tokens": 117950.0,
+            "output_tokens": 5384.0,
+            "llm_calls": 21.0
+          }
+        },
+        {
+          "level": 8,
+          "metrics": {
+            "cost_usd": 0.045204299999999996,
+            "total_tokens": 275517.0,
+            "input_tokens": 266902.0,
+            "output_tokens": 8615.0,
+            "llm_calls": 33.0
+          }
+        },
+        {
+          "level": 10,
+          "metrics": {
+            "cost_usd": 0.06627855,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": 12,
+          "metrics": {
+            "cost_usd": 0.0912618,
+            "total_tokens": 569643.0,
+            "input_tokens": 556720.0,
+            "output_tokens": 12923.0,
+            "llm_calls": 49.0
+          }
+        },
+        {
+          "level": 15,
+          "metrics": {
+            "cost_usd": 0.13606619999999997,
+            "total_tokens": 858646.0,
+            "input_tokens": 842492.0,
+            "output_tokens": 16154.0,
+            "llm_calls": 61.0
+          }
+        }
+      ],
+      "elasticity": 1.7372634132762403,
+      "metric_range": 0.11514329999999998,
+      "metric_cv": 0.5502068108136219
+    },
+    {
+      "factor": "max_words_per_ping",
+      "metric": "cost_usd",
+      "baseline_value": 0.06627855,
+      "points": [
+        {
+          "level": 100,
+          "metrics": {
+            "cost_usd": 0.030151499999999998,
+            "total_tokens": 188086.0,
+            "input_tokens": 183778.0,
+            "output_tokens": 4308.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": 150,
+          "metrics": {
+            "cost_usd": 0.0421932,
+            "total_tokens": 261905.0,
+            "input_tokens": 255444.0,
+            "output_tokens": 6461.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": 250,
+          "metrics": {
+            "cost_usd": 0.06627855,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": 400,
+          "metrics": {
+            "cost_usd": 0.10240545,
+            "total_tokens": 631013.0,
+            "input_tokens": 613783.0,
+            "output_tokens": 17230.0,
+            "llm_calls": 41.0
+          }
+        }
+      ],
+      "elasticity": 0.908463220755433,
+      "metric_range": 0.07225395,
+      "metric_cv": 0.4579129258938618
+    },
+    {
+      "factor": "cache_read_pct",
+      "metric": "cost_usd",
+      "baseline_value": 0.06627855,
+      "points": [
+        {
+          "level": 0.0,
+          "metrics": {
+            "cost_usd": 0.06627855,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": 0.25,
+          "metrics": {
+            "cost_usd": 0.052819725,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": 0.5,
+          "metrics": {
+            "cost_usd": 0.039360900000000004,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        },
+        {
+          "level": 0.75,
+          "metrics": {
+            "cost_usd": 0.02590194,
+            "total_tokens": 409550.0,
+            "input_tokens": 398781.0,
+            "output_tokens": 10769.0,
+            "llm_calls": 41.0
+          }
+        }
+      ],
+      "elasticity": null,
+      "metric_range": 0.04037661000000001,
+      "metric_cv": 0.32647815303262334
+    }
+  ]
+}

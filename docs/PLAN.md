@@ -525,3 +525,31 @@ Single-process layout at Phase 6 close. File sizes are non-blank, non-comment LO
 | `src/debate/shared/skill_loader.py` | ~30 | Loads `skills/<name>/SKILL.md`, strips YAML frontmatter (Phase 7.7) |
 | `src/debate/main.py` | ~120 | Terminal-menu CLI; presentation only, delegates to `DebateSDK` (Phase 7.1) |
 | `src/debate/shared/constants.py` | ~16 | Side literals, MessageType enum, defaults |
+
+## 11. ISO/IEC 25010 Quality Attribute Mapping
+
+How the eight ISO/IEC 25010 product-quality characteristics are addressed in this project (CLAUDE.md §18, guidelines §13).
+
+| Attribute | How it is addressed | Evidence |
+|---|---|---|
+| **Functional suitability** | All Exercise-02 mandatory conditions implemented: 3 agents, 10 pings/side, mutual clash, web search + RAG, non-tie verdict. | `docs/PRD.md` §2 KPIs G1–G10; `results/debates/*.json` |
+| **Performance efficiency** | Prompt caching (Anthropic), per-model cost tracking, parameter sensitivity study quantifying cost drivers; rate-limited concurrency. | `pricing.py`, `docs/PRD_sensitivity.md`, `assets/sensitivity_*.png` |
+| **Compatibility** | Provider-agnostic `LLMProvider` registry (OpenAI/Anthropic/Google) selectable via config; local ChromaDB + sentence-transformers (no external service lock-in). | ADR-009; `config/setup.json.models` |
+| **Usability** | Keyboard-driven terminal menu, live per-ping streaming, documented screens; README install/usage/troubleshooting. | `main.py`, `assets/*.png`, README |
+| **Reliability** | Watchdog kill+restart of hung children, per-call LLM timeouts, retries with backoff, graceful JSON-repair + clash auto-fix, budget alerts. | `watchdog.py`, `gatekeeper.py`, `base_agent.request_timeout`, `docs/PRD_watchdog.md` |
+| **Security** | Keys only via env (`.env` git-ignored, `.env.example` committed); `SecuritySanitizer` scrubs untrusted search/RAG text before prompts; gatekeeper is the single external-call chokepoint. | `security.py`, `.gitignore`, `gatekeeper.py` |
+| **Maintainability** | ≤150-LOC files, SDK-only business logic, OOP hierarchy + helper extraction, ≥85% test coverage, 0 Ruff violations, pluggable evaluator/provider extension points. | CLAUDE.md gates; CI `.github/workflows/ci.yml` |
+| **Portability** | `uv`-managed, `pyproject.toml` + `uv.lock`, cross-platform (Windows/macOS/Linux), relative paths only, fresh-clone acceptance test. | `docs/PRD.md` §7; `pyproject.toml` |
+
+## 12. Extension points (CLAUDE.md §19)
+
+The system is extended at clear seams **without modifying core code**:
+
+| Mechanism | How to extend | Where |
+|---|---|---|
+| **Provider plugin registry** | `register("name", ProviderClass)`; select per-agent via `config/setup.json.models`. Add a vendor without touching agent code. | `shared/llm_provider/base.py` (ADR-009) |
+| **Skill plugins** | Drop a `skills/<side>/auxiliary/*.md` file; it is auto-composed into the persona at load. No code change. | `shared/skill_loader.py` |
+| **Middleware chain** | Pass `ApiGatekeeper(..., middlewares=[mw, ...])`; each `mw(call_next, *args, **kwargs)` wraps **every** external call (logging, timing, metrics, auth) — onion order, default empty = zero overhead. | `shared/middleware.py` |
+| **Lifecycle hooks** | Subscribe via `on_event(kind, payload)`. Emitted lifecycle points: `debate_start` → (`round_start` → `ping`/`score` → `round_end`)* → `verdict` → `debate_end`. Extend behavior at any point without forking the orchestrator. | `orchestrator.py`, `process_orchestrator.py` |
+| **Pluggable evaluator** | The sensitivity engine takes any `params -> metrics` evaluator (DI); swap the analytical model for a live-LLM one. | `services/analysis/sensitivity.py` |
+| **Dependency injection** | `DebateSDK` accepts injected `provider_factory`, `gatekeeper`, `results_dir`, `coin_flip`, `use_processes` — the API-first seam every consumer (CLI/UI/tests) builds on. | `sdk/sdk.py` |

@@ -37,14 +37,14 @@ class OpenAIProvider(LLMProvider):
         messages: list[ChatMessage],
         model: str,
         max_tokens: int = 1024,
+        timeout: float | None = None,
     ) -> CompletionResponse:
         api_messages: list[dict] = [{"role": "system", "content": system}]
         api_messages.extend({"role": m.role, "content": m.content} for m in messages)
-        response = self._client.chat.completions.create(
-            model=model,
-            max_tokens=max_tokens,
-            messages=api_messages,
-        )
+        kwargs: dict = {"model": model, "max_tokens": max_tokens, "messages": api_messages}
+        if timeout is not None:
+            kwargs["timeout"] = timeout  # per-request wall-clock limit (seconds)
+        response = self._client.chat.completions.create(**kwargs)
         return self._normalize(response, model)
 
     @staticmethod

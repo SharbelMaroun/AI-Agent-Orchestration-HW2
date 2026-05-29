@@ -52,8 +52,8 @@ def make_fake_provider_factory():
     def factory(_name: str):
         provider = MagicMock()
 
-        def complete(*, system: str, messages: list, model: str, max_tokens: int):
-            del system, max_tokens
+        def complete(*, system: str, messages: list, model: str, max_tokens: int, timeout=None):
+            del system, max_tokens, timeout
             last_user = messages[-1].content if messages else ""
             low = last_user.lower()
             if "final scores" in low or "deliver the verdict" in low:

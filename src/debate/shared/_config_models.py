@@ -41,6 +41,39 @@ class ModelPrice(_Cfg):
     output_per_million_usd: float = Field(ge=0)
 
 
+class TokenModelCfg(_Cfg):
+    """Empirically-calibrated token-growth constants for the analytical cost
+    model. Fitted from the recorded debates in `results/debates/` — see
+    docs/PRD_sensitivity.md §Calibration. Kept in config (not source) so the
+    fit can be refreshed without code changes."""
+
+    tokens_per_word: float = Field(gt=0)  # output tokens per generated word
+    fixed_overhead_tokens: int = Field(ge=0)  # W-independent system+RAG+brief input
+    history_factor: float = Field(ge=0)  # input growth/round as a multiple of ping output
+    judge_overhead_ratio: float = Field(ge=0)  # judge tokens as a fraction of speaking tokens
+
+
+class AnalysisBaseline(_Cfg):
+    """The operating point the OAT sweep varies one factor away from."""
+
+    num_rounds: int = Field(gt=0)
+    max_words_per_ping: int = Field(gt=0)
+    model: str  # "provider/name", priced via SetupConfig.pricing
+    cache_read_pct: float = Field(ge=0, le=1)
+
+
+class AnalysisCfg(_Cfg):
+    """Sensitivity-analysis configuration: calibration, baseline, OAT grids.
+
+    `factors` maps a baseline field name to the ordered list of levels swept
+    for it (heterogeneous: ints for counts, floats for ratios, str for model).
+    """
+
+    token_model: TokenModelCfg
+    baseline: AnalysisBaseline
+    factors: dict[str, list[int | float | str]]
+
+
 class SetupConfig(_Cfg):
     """Mirrors `config/setup.json`."""
 
@@ -54,6 +87,9 @@ class SetupConfig(_Cfg):
     rag: RagCfg
     search: SearchCfg
     pricing: dict[str, dict[str, ModelPrice]]
+    # Optional so existing programmatic construction / fixtures stay valid;
+    # the shipped config/setup.json always provides it.
+    analysis: AnalysisCfg | None = None
 
 
 class ServiceLimit(_Cfg):

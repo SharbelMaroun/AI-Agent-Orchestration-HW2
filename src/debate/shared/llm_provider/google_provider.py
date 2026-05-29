@@ -41,13 +41,15 @@ class GoogleProvider(LLMProvider):
         messages: list[ChatMessage],
         model: str,
         max_tokens: int = 1024,
+        timeout: float | None = None,
     ) -> CompletionResponse:
         contents = self._format_messages(messages)
         client = self._genai.GenerativeModel(model_name=model, system_instruction=system)
-        response = client.generate_content(
-            contents,
-            generation_config={"max_output_tokens": max_tokens},
-        )
+        kwargs: dict = {"generation_config": {"max_output_tokens": max_tokens}}
+        if timeout is not None:
+            # Gemini exposes the per-request timeout via request_options, not a kwarg.
+            kwargs["request_options"] = {"timeout": timeout}
+        response = client.generate_content(contents, **kwargs)
         return self._normalize(response, model)
 
     @staticmethod

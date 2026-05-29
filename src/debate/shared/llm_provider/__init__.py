@@ -16,5 +16,6 @@ from debate.shared.llm_provider.base import (
     known_providers,
     register,
 )
+from debate.shared.version import __version__
 
-__all__ = ["LLMProvider", "build_provider", "known_providers", "register"]
+__all__ = ["LLMProvider", "build_provider", "known_providers", "register", "__version__"]

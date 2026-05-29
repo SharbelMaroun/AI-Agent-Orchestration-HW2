@@ -13,6 +13,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from debate.shared._config_models import (
+    AnalysisBaseline,
+    AnalysisCfg,
     BudgetCfg,
     ConsoleCfg,
     CostLog,
@@ -26,12 +28,15 @@ from debate.shared._config_models import (
     ServiceLimit,
     SetupConfig,
     Timeouts,
+    TokenModelCfg,
     _Cfg,
 )
 
 EXPECTED_VERSION = "1.00"
 
 __all__ = [
+    "AnalysisBaseline",
+    "AnalysisCfg",
     "BudgetCfg",
     "ConsoleCfg",
     "CostLog",
@@ -45,6 +50,7 @@ __all__ = [
     "ServiceLimit",
     "SetupConfig",
     "Timeouts",
+    "TokenModelCfg",
     "EXPECTED_VERSION",
     "load_env",
     "load_logging",

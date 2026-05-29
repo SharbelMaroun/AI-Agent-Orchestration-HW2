@@ -35,6 +35,12 @@ def rubric_blurb() -> str:
     return "Five dimensions per ping (Structure, Logos, Pathos, Ethos, Clash), 0-3 each."
 
 
+def make_rules(max_words_per_ping: int) -> str:
+    """Build the debate rules string from config so the per-ping word cap is
+    sourced from `setup.max_words_per_ping`, not hardcoded (CLAUDE.md §8)."""
+    return f"<={max_words_per_ping} words per ping, JSON-only replies, clash required from round 2."
+
+
 def announcement_text(topic: str, rules: str, num_rounds: int, opener: Side) -> str:
     return (
         f'Judge: Welcome to the debate. Topic: "{topic}". '

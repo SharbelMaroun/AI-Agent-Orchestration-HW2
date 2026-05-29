@@ -18,10 +18,12 @@ from debate.services._orchestrator_helpers import (
     announcement_text,
     build_cost_report,
     make_brief,
+    make_rules,
     persist_result,
     rubric_blurb,
 )
 from debate.services.agents.judge_agent import FinalizeRequest, JudgeAgent
+from debate.shared.constants import DEFAULT_MAX_WORDS_PER_PING
 from debate.shared.schemas import DebateResult, Ping, Score, Side, Verdict, YourTurn
 
 OnEvent = Callable[[str, Any], None]
@@ -35,7 +37,7 @@ class Orchestrator:
         self,
         topic: str,
         num_rounds: int,
-        rules: str = "<=250 words per ping, JSON-only replies, clash required from round 2.",
+        rules: str | None = None,
         results_dir: Path | str = "results/debates",
         on_event: OnEvent | None = None,
         coin_flip: CoinFlip = lambda: random.randint(0, 1),
@@ -45,7 +47,9 @@ class Orchestrator:
     ) -> None:
         self.topic = topic
         self.num_rounds = num_rounds
-        self.rules = rules
+        # Real runs pass a config-derived rules string (see sync_runner); the
+        # fallback is only for direct construction in tests/debugging.
+        self.rules = rules if rules is not None else make_rules(DEFAULT_MAX_WORDS_PER_PING)
         self.results_dir = Path(results_dir)
         self.on_event = on_event
         self.coin_flip = coin_flip
@@ -65,9 +69,11 @@ class Orchestrator:
         self._emit(
             "announcement", announcement_text(self.topic, self.rules, self.num_rounds, opener)
         )
+        self._emit("debate_start", {"topic": self.topic, "opener": opener})
         first, second = (dogs, cats) if opener == "dogs" else (cats, dogs)
         previous_ping: Ping | None = None
         for round_num in range(1, self.num_rounds + 1):
+            self._emit("round_start", round_num)
             first_ping, second_ping = self._run_round(
                 first,
                 second,
@@ -77,7 +83,9 @@ class Orchestrator:
             )
             self.pings.extend([first_ping, second_ping])
             previous_ping = second_ping
+            self._emit("round_end", round_num)
         verdict = self._collect_verdict(judge)
+        self._emit("debate_end", verdict.winner)
         result = DebateResult(
             topic=self.topic,
             pings=self.pings,

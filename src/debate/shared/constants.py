@@ -13,6 +13,9 @@ SIDE_DOGS: str = "dogs"
 SIDE_CATS: str = "cats"
 
 DEFAULT_MAX_TOKENS: int = 1024
+# Fallback per-ping word cap for direct Orchestrator construction only; the real
+# debate flow sources this from setup.max_words_per_ping (see sync_runner).
+DEFAULT_MAX_WORDS_PER_PING: int = 250
 
 
 class MessageType(str, Enum):

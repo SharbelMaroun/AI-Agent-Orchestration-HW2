@@ -13,9 +13,10 @@ Three AI agents — **Dogs** (logos + ethos), **Cats** (pathos + Socratic), and 
 
 ## Submission
 
+- **Submitted to:** Dr. Yoram Segal
 - **Course:** Orchestration of AI Agents
-- **Instructor:** Dr. Yoram Segal
 - **Assignment:** Exercise 02 — AI Agent Debate
+- **Submission date:** 2026-05-29
 - **Topic:** *Are dogs or cats the better pet?* (judged on persuasive ability, not facts)
 - **Repository:** public on GitHub (link in Moodle submission)
 - **License:** MIT — see [LICENSE](LICENSE).
@@ -180,7 +181,7 @@ Full Mermaid class diagram + module map: see [`docs/PLAN.md`](docs/PLAN.md) §4 
 
 ### Multi-skill personas
 
-Each debating agent loads not a single system prompt but a composed bundle: a primary persona (`skills/<side>/SKILL.md`) plus several auxiliary skills under `skills/<side>/auxiliary/`. The bundles are intentionally asymmetric per persona, but **dimension-balanced** as of 2026-05-28: Dogs has 4 auxiliary skills, Cats has 5 (one extra logos-shaped skill, `empirical_independence`, added to counterbalance the three Dogs evidence playbooks — see the "Updated result after 19 saved debates" subsection further down). Dogs and Cats share no auxiliary skill content.
+Each debating agent loads not a single system prompt but a composed bundle: a primary persona (`skills/<side>/SKILL.md`) plus several auxiliary skills under `skills/<side>/auxiliary/`. The bundles are intentionally asymmetric per persona as of 2026-05-28: Dogs has 4 auxiliary skills, Cats has 6 — two extra dimension-targeted skills, `empirical_independence` (logos) and `expert_authority` (ethos), added to counterbalance the three Dogs evidence playbooks (see the "Updated result after 19 saved debates" subsection further down). Dogs and Cats share no auxiliary skill content.
 
 | Dogs (logos + ethos) | Cats (pathos + Socratic + logos backup) |
 |---|---|
@@ -264,14 +265,18 @@ Current state (final process-mode sweep):
 
 | Metric | Threshold (CLAUDE.md) | Actual |
 |---|---|---|
-| Test count | — | **249** |
-| Coverage | ≥ 85% | **92.79%** |
+| Test count | — | **289** |
+| Coverage | ≥ 85% | **93.58%** |
 | Ruff violations | 0 | **0** (`check` + `format --check` both clean) |
 | Pre-commit hooks | configured + CI-enforced | ✅ `.pre-commit-config.yaml` (ruff + format + trailing-ws + EOF + check-yaml/json/toml + merge-conflict + detect-private-key); CI runs `pre-commit run --all-files` |
-| File LOC | ≤ 150 (code lines) | ✅ All under cap by *both* the literal "excludes blanks + comments" reading AND the strict raw-line count. Largest raw: `test_base_agent.py` at 148. |
+| File LOC | ≤ 150 (code lines) | ✅ All under cap by *both* the literal "excludes blanks + comments" reading AND the strict raw-line count. Largest raw: `test_base_agent.py` at 149. |
 | Secrets in repo | 0 | `.env` gitignored; only `.env.example` committed |
 
 Test layout: unit tests mirror the production modules, with integration coverage for end-to-end debate flow, real ChromaDB retrieval, multi-round invariants, CLI behavior, and process orchestration. Shared fixtures (`fake_provider_factory`, `passthrough_gatekeeper`, `hash_embedder`, ping/score factories) live in `tests/conftest.py`.
+
+**ISO/IEC 25010 conformance** — how this project addresses all eight product-quality characteristics (functional suitability, performance efficiency, compatibility, usability, reliability, security, maintainability, portability) is mapped to concrete evidence in [`docs/PLAN.md` §11](docs/PLAN.md#11-isoiec-25010-quality-attribute-mapping).
+
+**Extension points** — the project is extended without editing core code via a provider plugin registry, drop-in skill files, a gatekeeper **middleware chain** (`ApiGatekeeper(middlewares=[...])`), **lifecycle hook** events on the `on_event` stream (`debate_start` / `round_start` / `round_end` / `debate_end`), a pluggable sensitivity evaluator, and SDK dependency injection. See [`docs/PLAN.md` §12](docs/PLAN.md#12-extension-points-claudemd-19).
 
 ---
 
@@ -355,6 +360,30 @@ The +1.00 pathos gap matches what the Skill prompts ask for (Cats persona = "viv
 | **Token economy & cost per debate** — output tokens dominate variance in the six-run baseline; the final process-mode run costs about $0.0559 with web search/RAG evidence enabled. | |
 
 Regenerate any of these with `uv run python scripts/cross_debate_analysis.py`.
+
+### Parameter sensitivity analysis (OAT)
+
+Systematic parameter research per CLAUDE.md §12 / guidelines §9. A calibrated analytical cost model (`docs/PRD_sensitivity.md`) lets us sweep one factor at a time around the baseline and measure influence — **deterministic, reproducible, and $0.00 API cost**. The model reproduces the recorded debates' mean cost ($0.0663) exactly. Run it with `uv run python scripts/sensitivity_analysis.py`; analysis lives in `notebooks/analysis.ipynb` §7.
+
+**Tornado ranking of debate cost** (baseline R=10, W=250, gpt-4o-mini):
+
+| Factor | Range (USD) | CV | Arc elasticity |
+|---|---:|---:|---|
+| `model` | 1.038 | 0.98 | — (categorical) |
+| `num_rounds` | 0.115 | 0.55 | **+1.74** (super-linear) |
+| `max_words_per_ping` | 0.072 | 0.46 | +0.91 (≈ linear) |
+| `cache_read_pct` | 0.040 | 0.33 | — (negative, linear) |
+
+**Key result:** model choice dominates cost by ~10×; among debate-shape knobs `num_rounds` is most sensitive, and its **+1.74 elasticity confirms cost grows _quadratically_ in rounds** — each round re-sends the whole accumulated history. Caching is a near-linear cost lever (75% cache reads ≈ −40% cost).
+
+| | |
+|---|---|
+| ![Sensitivity tornado](assets/sensitivity_tornado.png) | ![Factor response lines](assets/sensitivity_factor_lines.png) |
+| **Tornado** — factor influence on cost, ranked by range. | **OAT response** — `num_rounds` is visibly convex (quadratic); words linear; cache linear↓. |
+| ![Rounds × words heatmap](assets/sensitivity_heatmap.png) | ![Empirical rubric box plots](assets/empirical_boxplots.png) |
+| **Interaction heatmap** — predicted cost over the rounds×words grid. | **Empirical spread** (40 debates) — `structure`/`clash` saturate; `pathos`/`ethos`/`logos` discriminate. |
+
+Reports persist to `results/sensitivity/sensitivity_{cost,tokens}.json`.
 
 ---
 

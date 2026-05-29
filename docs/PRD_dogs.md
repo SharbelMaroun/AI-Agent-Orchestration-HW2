@@ -73,7 +73,7 @@ Output JSON:
 ```
 
 ## 8. Configuration
-- Provider + model: default `{provider: "anthropic", name: "claude-haiku-4-5-20251001"}` (cheap, fast, sufficient for structured rhetoric). Configurable in `setup.json.models.dogs`.
+- Provider + model: shipped default `{provider: "openai", name: "gpt-4o-mini"}` (cheap, fast, sufficient for structured rhetoric). Configurable in `setup.json.models.dogs` (any registered provider).
 - Word limit per ping: 250 (configurable in `setup.json`).
 - RAG `k`: 3 chunks per query.
 
@@ -89,3 +89,17 @@ Output JSON:
 - **Web search fails:** mock zero results → agent falls back to RAG.
 - **RAG empty:** mock empty corpus → agent uses only web search + general knowledge.
 - **Concession test:** opponent says "you make a good point" — Dogs agent must rebut, not reciprocate.
+
+## 11. Alternatives considered
+| Option | Chosen? | Rationale |
+|---|---|---|
+| **Multi-skill composition** (primary `SKILL.md` + 4 auxiliary playbooks) vs one mega-prompt | ✅ composition | Satisfies the multi-skill requirement (`hw2_Notes.txt` #15); each auxiliary skill isolates one evidence tactic (health / utility / bonding / aloofness-rebuttal) and is independently editable. |
+| **Heuristic authority-keyword search query** vs an extra LLM call to phrase the query | ✅ heuristic | Zero added tokens/latency and deterministic; biases DDG toward studies/journals reliably. |
+| **Research-card distillation** of evidence vs dumping raw hits into the prompt | ✅ cards | Keeps the prompt compact and rubric-aligned; raw dumps inflate input tokens (the dominant cost driver — see `PRD_sensitivity.md`). |
+| **gpt-4o-mini** vs haiku / gpt-4o | ✅ gpt-4o-mini | Best cost/quality for structured logos-ethos prose; swappable per config. |
+
+## 12. Performance metrics
+- **Pings:** exactly 10; ≤ `max_words_per_ping` (250) words ≈ 300 output tokens each.
+- **Per ping:** 1 LLM completion + 1 web search + 1 RAG retrieval (`k=3`); search + RAG run **concurrently** (`ThreadPoolExecutor`, 2 workers).
+- **Citations:** ≥ 1 per ping (web URL and/or RAG passage).
+- **Cost contribution:** linear in ping count and word cap; see the OAT sensitivity study for the cost curve.

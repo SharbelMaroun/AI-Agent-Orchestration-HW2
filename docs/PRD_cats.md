@@ -1,7 +1,7 @@
 # PRD — Cats Agent
 
 **Version:** 1.00 · Parent: `docs/PRD.md` · Side: `cats` · Style: **pathos + Socratic**
-**Status:** Implemented Phase 3.7; Skill restructured Phase 7.7 (Lesson 05 §5); **multi-skill composition added 2026-05-27** per `hw2_Notes.txt` note #15. Primary persona at `skills/cats/SKILL.md`; 4 auxiliary skills under `skills/cats/auxiliary/` (`imagery_warmth.md`, `culture_literary.md`, `socratic_moves.md`, `rebuttal_utility.md`) loaded together by `load_agent_skills()`. RAG corpus at `data/cats/*.txt` (15 passages, max 196 words each).
+**Status:** Implemented Phase 3.7; Skill restructured Phase 7.7 (Lesson 05 §5); **multi-skill composition added 2026-05-27** per `hw2_Notes.txt` note #15. Primary persona at `skills/cats/SKILL.md`; 6 auxiliary skills under `skills/cats/auxiliary/` (`imagery_warmth.md`, `culture_literary.md`, `socratic_moves.md`, `rebuttal_utility.md`, plus `empirical_independence.md` (logos) and `expert_authority.md` (ethos), added 2026-05-28 to counter Dogs' dimension-stacking) loaded together by `load_agent_skills()`. RAG corpus at `data/cats/*.txt` (15 passages, max 196 words each).
 
 ---
 
@@ -69,7 +69,7 @@ Output JSON:
 ```
 
 ## 8. Configuration
-- Provider + model: default `{provider: "anthropic", name: "claude-haiku-4-5-20251001"}`. Configurable in `setup.json.models.cats`.
+- Provider + model: shipped default `{provider: "openai", name: "gpt-4o-mini"}`. Configurable in `setup.json.models.cats` (any registered provider).
 - Word limit per ping: 250 (configurable).
 - RAG `k`: 3 chunks per query.
 
@@ -84,3 +84,17 @@ Output JSON:
 - **Happy path:** opponent argues "dogs lower blood pressure" → Cats agent reframes ("but at what cost to autonomy?") + cites Montaigne or independence-philosophy passage.
 - **Style drift:** if a ping becomes too statistic-heavy (>2 numbers cited), trigger style-warning in logger.
 - **Concession test:** opponent says "you have a point about independence" — Cats agent does not reciprocate; presses harder with a Socratic question.
+
+## 11. Alternatives considered
+| Option | Chosen? | Rationale |
+|---|---|---|
+| **Pathos + Socratic core, balanced with two logos/ethos auxiliaries** vs pure pathos | ✅ balanced | Cross-debate analysis showed a pure-pathos Cats lost on the rubric's logos/ethos/structure dimensions; `empirical_independence` (logos) + `expert_authority` (ethos) close measured gaps without diluting the persona. See README "Updated result" subsection. |
+| **6 auxiliary skills** vs matching Dogs' 4 | ✅ 6 (intentional asymmetry) | Compensates for Dogs' built-in evidence dimension-stacking; preserves the multi-skill requirement (`hw2_Notes.txt` #15) by *adding* breadth rather than removing it. |
+| **Heuristic literary/cultural search query** vs LLM-phrased query | ✅ heuristic | Same cost/determinism rationale as Dogs; biases DDG toward literature/philosophy. |
+| **gpt-4o-mini** vs haiku / gpt-4o | ✅ gpt-4o-mini | Symmetry with Dogs keeps the contest fair on the model axis; swappable per config. |
+
+## 12. Performance metrics
+- **Pings:** exactly 10; ≤ `max_words_per_ping` (250) words.
+- **Per ping:** 1 LLM completion + 1 web search + 1 RAG retrieval (`k=3`), search + RAG concurrent.
+- **Rhetorical footprint (60-ping sample):** `pathos` ≈ 3.0 (persona strength); the two added auxiliaries lift `logos`/`ethos` toward parity (tracked in the README per-dimension table).
+- **Citations:** ≥ 1 per ping.

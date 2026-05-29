@@ -10,6 +10,7 @@ from typing import Any
 from debate.services._orchestrator_helpers import (
     announcement_text,
     make_brief,
+    make_rules,
     persist_result,
     rubric_blurb,
 )
@@ -50,11 +51,15 @@ class ProcessOrchestrator:
                 "announcement",
                 announcement_text(self.setup.topic, self._rules(), self.setup.num_rounds, opener),
             )
+            self._emit("debate_start", {"topic": self.setup.topic, "opener": opener})
             first, second = ("dogs", "cats") if opener == "dogs" else ("cats", "dogs")
             previous: Ping | None = None
             for round_num in range(1, self.setup.num_rounds + 1):
+                self._emit("round_start", round_num)
                 previous = self._round(first, second, round_num, previous)
+                self._emit("round_end", round_num)
             verdict = self._verdict()
+            self._emit("debate_end", verdict.winner)
             self.runtime.shutdown()
             closed = True
             result = DebateResult(
@@ -114,7 +119,7 @@ class ProcessOrchestrator:
         return verdict
 
     def _rules(self) -> str:
-        return "<=250 words per ping, JSON-only replies, clash required from round 2."
+        return make_rules(self.setup.max_words_per_ping)
 
     def _emit(self, kind: str, payload: Any) -> None:
         if self.on_event is not None:

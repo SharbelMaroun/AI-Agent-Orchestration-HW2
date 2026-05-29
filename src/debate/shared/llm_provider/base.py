@@ -28,8 +28,15 @@ class LLMProvider(ABC):
         messages: list[ChatMessage],
         model: str,
         max_tokens: int = 1024,
+        timeout: float | None = None,
     ) -> CompletionResponse:
-        """Send a single completion request. Must normalize vendor response."""
+        """Send a single completion request. Must normalize vendor response.
+
+        ``timeout`` is the per-request wall-clock limit in seconds (None = the
+        SDK default). Every concrete provider forwards it to its HTTP client so
+        a hung vendor call fails fast instead of relying solely on the watchdog
+        (CLAUDE.md / Lesson 05: "timeouts on every external call").
+        """
 
 
 _REGISTRY: dict[str, type[LLMProvider]] = {}

@@ -25,8 +25,9 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Claude personal settings
+# Claude personal settings + runtime artifacts
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # RAG vector store binaries (regenerated from data/<agent>/*.txt)
 data/*/chroma/

@@ -5,5 +5,6 @@ from debate.services.research.researcher import (
     ResearchCard,
     build_research_cards,
 )
+from debate.shared.version import __version__
 
-__all__ = ["ResearchAssistant", "ResearchCard", "build_research_cards"]
+__all__ = ["ResearchAssistant", "ResearchCard", "build_research_cards", "__version__"]

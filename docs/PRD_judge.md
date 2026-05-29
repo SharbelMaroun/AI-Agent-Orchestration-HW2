@@ -58,7 +58,7 @@ Ties are forbidden. Output:
 ## 7. Constraints
 - No web search tool (judge is intentionally not a fact-checker).
 - No RAG.
-- Larger / more capable model — judging needs careful reasoning. Default `{provider: "anthropic", name: "claude-sonnet-4-6"}`. Configurable in `setup.json.models.judge`.
+- Model: shipped default `{provider: "openai", name: "gpt-4o-mini"}` (cost-driven; see §10). The provider abstraction allows swapping to a larger judge (e.g. `claude-sonnet-4-6`) via `setup.json.models.judge` when more careful reasoning is wanted.
 - Output must be valid JSON; failure → orchestrator re-prompts up to 2 times.
 
 ## 8. Acceptance criteria
@@ -74,3 +74,20 @@ Ties are forbidden. Output:
 - **Collusion attempt:** force Cats to concede in every round — Judge issues `COLLUSION_WARNING` and Dogs wins on clash.
 - **Malformed ping:** ping missing required fields — Judge requests resubmission.
 - **JSON parse failure:** mock LLM returns invalid JSON — orchestrator retries; after 2 failures, raises.
+
+## 10. Alternatives considered
+| Option | Chosen? | Rationale |
+|---|---|---|
+| **5-dimension rubric** vs a single overall 0–10 score | ✅ 5-dim | Gives diagnostic per-dimension signal (powers the persona analysis + tie-break); a scalar score hides *why* a side won. |
+| **Structured JSON verdict** vs free-form prose verdict | ✅ structured | Machine-validatable, enables the deterministic tie-break + cost/score charts; prose alone can't be aggregated. |
+| **Deterministic tie-break in code** vs asking the LLM to break ties | ✅ code | Ties are forbidden and must be reproducible; an LLM tie-break is non-deterministic and once authored a rationale contradicting the winner (fixed 2026-05-28). |
+| **Side-blind scoring** vs showing the judge the side label | ✅ side-blind | Removes the most defensible persona-bias channel; side is stamped in code post-hoc. |
+| **gpt-4o-mini** vs a larger judge (sonnet/opus) | ✅ gpt-4o-mini (default) | ~10× cheaper; sufficient for rubric application. Swappable via config when deeper reasoning is needed. |
+| Pairwise / ELO ping comparison | ❌ | O(n²) comparisons, opaque, and overkill for a single 20-ping debate. |
+
+## 11. Performance metrics
+- **LLM calls per debate:** `2·R + 1` (one score per ping + one verdict) = 41 at R=10.
+- **Judge token share:** ≈ **0.78×** the two speakers' combined tokens (calibrated in `docs/PRD_sensitivity.md`) — the judge re-reads the growing transcript each scoring call.
+- **Tie-break:** O(n) over scores, fully deterministic.
+- **JSON-repair budget:** 1 re-prompt per malformed score/verdict before the orchestrator aborts.
+- **Output bounds:** rationale ≥ 100 chars; 3–5 key-point bullets per side.

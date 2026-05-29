@@ -39,6 +39,7 @@ def _build_agent(kind: str, setup: SetupConfig, gatekeeper: ApiGatekeeper) -> An
         "provider": build_provider(model_ref.provider),
         "gatekeeper": gatekeeper,
         "model_name": model_ref.name,
+        "request_timeout": setup.timeouts.agent_response_seconds,
     }
     if kind == "dogs":
         return DogsAgent(**common, **speaking_agent_kwargs("dogs", setup, gatekeeper))

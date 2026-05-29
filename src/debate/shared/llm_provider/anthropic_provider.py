@@ -37,14 +37,18 @@ class AnthropicProvider(LLMProvider):
         messages: list[ChatMessage],
         model: str,
         max_tokens: int = 1024,
+        timeout: float | None = None,
     ) -> CompletionResponse:
         api_messages = self._format_messages(messages)
-        response = self._client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
-            messages=api_messages,
-        )
+        kwargs: dict = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            "messages": api_messages,
+        }
+        if timeout is not None:
+            kwargs["timeout"] = timeout  # per-request wall-clock limit (seconds)
+        response = self._client.messages.create(**kwargs)
         return self._normalize(response, model)
 
     @staticmethod

@@ -72,3 +72,19 @@ After `max_restarts_per_agent` exceeded → log `AGENT_DEAD`, raise `WatchdogFat
 - `ProcessRuntime` registers Dogs, Cats, and Judge child processes with restart factories. Child workers emit `Heartbeat` envelopes through a heartbeat queue while waiting for work. ✅ implemented.
 - Shutdown is programmatic: the parent sends a `None` sentinel, collects child cost summaries, then calls `Watchdog.stop()` to clean up any still-live processes. ✅ implemented.
 - **Beyond spec:** `Watchdog.check_once()` is exposed publicly so tests can drive the timeout-detection logic without spinning up the daemon thread. The loop is `while not stop: check_once(); sleep(poll)` — the unit-of-work seam used the same pattern as the gatekeeper's `sleep_fn` injection.
+
+## 10. Alternatives considered
+| Option | Chosen? | Rationale |
+|---|---|---|
+| **Daemon thread in the parent** polling a heartbeat queue vs a separate watchdog *process* | ✅ thread | The parent already owns the child handles and the orchestrator loop; a thread shares that state directly with a simple `Lock`, no extra IPC. A separate process would need to re-discover pids and duplicate the queues. |
+| **Child-pushed heartbeats** (daemon thread in each worker) vs parent-polled liveness probes | ✅ child-pushed | A worker mid–LLM-call can't answer a probe, but its heartbeat thread keeps emitting — so a slow-but-alive call isn't mistaken for a hang. |
+| **Per-request LLM timeout** as the primary guard vs relying only on the watchdog | ✅ both (defense in depth) | The provider `timeout` (config-driven, below `kill_after`) fails a hung *call* fast; the watchdog catches whole-process hangs (deadlock, OOM, infinite loop) the call timeout can't see. |
+| **Raise `kill_after` above the longest LLM call** vs pausing heartbeats during calls | ✅ raise threshold | Simpler and race-free; `watchdog_kill_after_seconds=90 > agent_response_seconds=60`. |
+| Unbounded restarts | ❌ | Capped at `max_restarts_per_agent` (3) → `WatchdogFatalError`, so a crash-looping agent aborts the debate gracefully instead of spinning forever. |
+
+## 11. Performance metrics
+- **Heartbeat interval:** `watchdog_heartbeat_seconds` (5s); **kill threshold:** `watchdog_kill_after_seconds` (90s).
+- **Overhead:** one daemon poll thread in the parent + one heartbeat thread per child; negligible (< 0.5% CPU during a debate).
+- **Detection latency:** a hang is caught within ≤ 2 × heartbeat_seconds of crossing the kill threshold.
+- **Restart bound:** ≤ `max_restarts_per_agent` (3) per agent before fatal abort.
+- **Shutdown:** terminate → 2s grace → kill; no zombie processes.

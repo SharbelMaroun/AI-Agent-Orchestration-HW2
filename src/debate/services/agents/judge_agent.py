@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from debate.services.agents._json_block import JSON_BLOCK_RE
 from debate.services.agents._judge_helpers import (
     detect_collusion,
     extract_key_points,
@@ -20,7 +21,6 @@ from debate.shared.schemas import Ping, Score, Side, Verdict
 from debate.shared.skill_loader import load_skill
 
 DEFAULT_SKILL_PATH = Path("skills/judge")
-_JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 class FinalizeRequest:
@@ -48,6 +48,12 @@ class JudgeAgent(BaseAgent):
         self.scores: list[Score] = []
 
     def score_ping(self, ping: Ping) -> Score:
+        """Score one ping on the 5-dimension rubric (0-3 each).
+
+        Prompts the LLM side-blind (no side label) to reduce persona bias;
+        zeroes ``clash`` on a detected concession (anti-collusion); stamps the
+        side deterministically in code. Appends to ``self.scores`` and returns it.
+        """
         prompt = (
             f"Score this ping (round {ping.round}):\n\n"
             f"{ping.text}\n\n"
@@ -66,6 +72,13 @@ class JudgeAgent(BaseAgent):
         return score
 
     def decide_winner(self, pings: list[Ping]) -> Verdict:
+        """Synthesize the final verdict from accumulated scores.
+
+        Totals are summed in code (not trusted to the LLM); on an exact tie the
+        deterministic ``tie_break`` cascade picks the winner and its rationale is
+        prepended so the text can never contradict the recorded winner. Ties are
+        therefore impossible. Returns the validated ``Verdict``.
+        """
         dogs_total = sum(self._total(s) for s in self.scores if s.side == "dogs")
         cats_total = sum(self._total(s) for s in self.scores if s.side == "cats")
         prompt = (
@@ -120,7 +133,7 @@ class JudgeAgent(BaseAgent):
 
     @staticmethod
     def _extract_json(text: str) -> dict:
-        match = _JSON_BLOCK_RE.search(text)
+        match = JSON_BLOCK_RE.search(text)
         if not match:
             raise ValueError("no JSON in judge reply")
         cleaned = re.sub(r",\s*([}\]])", r"\1", match.group(0))
