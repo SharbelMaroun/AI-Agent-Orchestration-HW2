@@ -725,7 +725,7 @@ Stage 1 is documented in `README.md` under "Stage 1 manual discovery transcript"
 - [ ] Cell 7: word-count distribution per side
 - [ ] Cell 8: cost breakdown — table by model with input/output tokens + $
 - [ ] Cell 9: cache hit ratio over time
-- [ ] Cell 10: parameter sensitivity — re-run debate with different temperature, compare verdicts
+- [x] Cell 10: parameter sensitivity — implemented as a reproducible analytical OAT sweep (see §7.6) instead of stochastic temperature re-runs
 - [ ] Cell 11: latex equation for cost formula
 - [ ] Cell 12: conclusion + key takeaways
 - [ ] Export figures as `assets/*.png` for README
@@ -742,6 +742,53 @@ Stage 1 is documented in `README.md` under "Stage 1 manual discovery transcript"
 ### 7.5 Class diagram artifact
 - [ ] Render class diagram as PlantUML or Mermaid in `assets/class_diagram.svg`
 - [ ] Link from `PLAN.md` and `README.md`
+
+### 7.6 Parameter sensitivity analysis (CLAUDE.md §12) ✅
+- [x] Calibrate the analytical token model from the 40 recorded debates (tokens/word, fixed overhead, history growth, judge ratio)
+- [x] Add `analysis` block (token_model, baseline, OAT factor grids) to `config/setup.json`
+- [x] Add `AnalysisCfg` / `TokenModelCfg` / `AnalysisBaseline` pydantic models (optional, defaulted)
+- [x] `cost_model.py`: `predict_economics()` — deterministic cost/token/calls model
+- [x] Reproduce empirical baseline cost ($0.0663) within <0.1%
+- [x] `_models.py`: `SweepPoint` / `FactorSensitivity` / `SensitivityReport` dataclasses
+- [x] `sensitivity.py`: `run_oat()` OAT engine + arc-elasticity + range + CV + tornado ranking
+- [x] `sensitivity.py`: `economics_evaluator()` pluggable default evaluator (dependency injection)
+- [x] `empirical.py`: `empirical_summary()` — five-number distributions over recorded debates
+- [x] `runner.py`: `build_report()` + `save_report()` (persist to `results/sensitivity/`)
+- [x] Expose `run_sensitivity_analysis()` + `empirical_summary()` on `DebateSDK`
+- [x] `scripts/sensitivity_analysis.py` runner + `scripts/_chart_sensitivity.py` helpers
+- [x] Generate tornado chart (`assets/sensitivity_tornado.png`)
+- [x] Generate per-factor response lines (`assets/sensitivity_factor_lines.png`)
+- [x] Generate rounds×words cost heatmap (`assets/sensitivity_heatmap.png`)
+- [x] Generate empirical rubric box plots (`assets/empirical_boxplots.png`)
+- [x] Persist `results/sensitivity/sensitivity_{cost,tokens}.json`
+- [x] Notebook §7: load report, tornado table, factor-line plot, LaTeX index defs, academic refs, interpretation
+- [x] Unit tests: `test_cost_model.py`, `test_sensitivity.py`, `test_empirical.py`, `test_analysis_runner.py` (29 tests, 98.9% pkg coverage)
+- [x] Write `docs/PRD_sensitivity.md` (theory, calibration, I/O, alternatives, performance metrics, test scenarios)
+- [x] Document in README research section with the four charts + findings table
+
+### 7.7 Audit remediation (deep-review follow-ups) ✅
+- [x] Per-call LLM timeouts: add `timeout` to `LLMProvider.complete()` + OpenAI/Anthropic/Google clients
+- [x] Wire `setup.timeouts.agent_response_seconds` as `BaseAgent.request_timeout` (sync_runner + process_worker)
+- [x] Timeout-forwarding tests for all three providers + base_agent
+- [x] ISO/IEC 25010 quality-attribute mapping table in `docs/PLAN.md` §11 + README pointer
+- [x] README: add "Submitted to" + submission date to the report header
+- [x] README: fix stale Cats auxiliary-skill count (5 → 6)
+- [x] Kill hardcoded `250`: add `make_rules()` helper; wire `setup.max_words_per_ping` in both orchestrators
+- [x] Docstrings on `DebateSDK.run_debate`, `JudgeAgent.score_ping`/`decide_winner`, `ApiGatekeeper.execute`
+- [x] `__all__` + `__version__` on every sub-package `__init__.py` (re-exported from canonical `version.py`)
+- [x] Refresh README quality table (284 tests, 93.52% coverage)
+
+### 7.8 Optional polish (trivial trio + PRD backfill + extensibility) ✅
+- [x] Fix `PRD_gatekeeper.md` embeddings over-claim (local model — intentionally not gatekept)
+- [x] Extract duplicated `_JSON_BLOCK_RE` → shared `services/agents/_json_block.py`
+- [x] Remove redundant `uv pip install pre-commit` from CI (already a dev dependency)
+- [x] Backfill `Alternatives considered` + `Performance metrics` into all 6 per-mechanism PRDs
+- [x] Correct stale model defaults (→ openai/gpt-4o-mini) + Cats skill count (→ 6) in the PRDs
+- [x] Gatekeeper middleware chain (`shared/middleware.py`, `ApiGatekeeper(middlewares=[...])`) + tests
+- [x] Lifecycle hook events (`debate_start`/`round_start`/`round_end`/`debate_end`) in both orchestrators
+- [x] Fix latent circular import (lightweight `debate.sdk.__init__`, no facade re-export)
+- [x] Document extension points in `docs/PLAN.md` §12 + README pointer
+- [x] Refresh README quality table (289 tests, 93.58% coverage)
 
 ---
 

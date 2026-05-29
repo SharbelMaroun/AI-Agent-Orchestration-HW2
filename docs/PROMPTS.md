@@ -695,6 +695,44 @@ The `Score.side` field is still populated deterministically in code from `ping.s
 
 ---
 
+## 2026-05-29 — Parameter sensitivity analysis (closing the §12 research gap)
+
+**Context:** A deep multi-agent audit against the four spec files flagged one real FAIL: CLAUDE.md §12 / guidelines §9 require *systematic parameter research with sensitivity analysis (OAT / variance-based / partial-derivative)*, but the notebook was reporting-only — no controlled parameter study, no output-sensitivity plots.
+**Goal:** Close the gap with a *reproducible, zero-API-cost* study (a grader on a fresh clone must reproduce it without keys), not a one-off live LLM sweep.
+**Key design decision (data source):** Rather than re-running real debates per parameter level (≈$1–3, ~1–2 h, non-reproducible, stochastic), build a **calibrated analytical cost model** and sweep it deterministically. Calibration came from the 40 recorded debates:
+  - output ≈ **1.21 tokens/word** (mean 302 tok at the 250-word cap);
+  - per-round input is **linear** (2964 → 19415 across rounds 1→10, slope ≈1828/round) because each agent re-sends its accumulated history → decomposed into `fixed_overhead≈1136` + `history_factor≈6.05 × ping-output`;
+  - `judge_overhead_ratio≈0.78` (judge cost ÷ speaking cost). The baseline prediction reproduces the empirical mean cost **$0.0663 exactly**.
+**Method:** OAT sweep around the baseline over `num_rounds`, `max_words_per_ping`, `model`, `cache_read_pct`; per factor report **arc elasticity** (∆y/y₀ ÷ ∆x/x₀), **range**, and **CV**; tornado-rank by range. The engine takes a *pluggable* evaluator (DI) so a live-LLM evaluator can replace the analytical one later without code changes.
+**Headline result:** `model` dominates cost ~10×; `num_rounds` **elasticity +1.74** (super-linear) confirms the model's *quadratic* input growth — the non-obvious finding the study exists to surface; `max_words` ≈ linear (+0.91); caching is a near-linear negative lever.
+**Lesson:** When the graded artifact must be *reproducible by an examiner without secrets*, an empirically-calibrated deterministic model beats a live stochastic sweep: instant, free, unit-testable, and still a genuine partial-derivative/variance result. Calibrate the model's constants from real recorded runs (and keep them in config, not source) so the "analytical" model stays honest. The live harness is one evaluator swap away for anyone wanting empirical LLM-output sensitivity.
+
+---
+
+## 2026-05-29 — Deep-review audit remediation (timeouts, ISO 25010, polish)
+
+**Context:** After the sensitivity-analysis FAIL was closed, the remaining deep-audit findings were worked in one pass: the Exercise-02 "timeouts on every external call" PARTIAL, the ISO/IEC 25010 FAIL, and a cluster of README/config/docstring/packaging polish items.
+**Goal:** Close every verified gap with local, reversible edits while holding all CLAUDE.md gates (≤150 LOC, ruff 0, ≥85% coverage).
+**Key decisions & lessons:**
+- **Timeouts via the existing config knob.** Rather than add a new config field (which would break `Timeouts` construction under `extra="forbid"`), reused `setup.timeouts.agent_response_seconds` (60s < watchdog kill 90s) as `BaseAgent.request_timeout`, threaded to each provider's HTTP call. Lesson: prefer an existing, semantically-correct config value over a new one when the model forbids extras.
+- **Conditional kwarg, not `timeout=None`.** Providers only pass `timeout`/`request_options` to the SDK when non-None, so the default path is unchanged and mocks that don't expect it still pass. Tests assert both the forwarded value and its omission when None.
+- **DRY the hardcoded `250`.** Extracted `make_rules(max_words_per_ping)`; both orchestrators now source the cap from `config.max_words_per_ping` (the previously-dead key), with a `constants.DEFAULT_MAX_WORDS_PER_PING` fallback only for direct test construction.
+- **One version source.** Every sub-package `__init__` re-exports `__version__` from `debate.shared.version` (not a literal), so the strict "`__version__` in every sub-dir" rule is satisfied without duplicating the number.
+- **Didn't fabricate.** The audit also wanted Amr's GitHub handle in the README header; left it omitted (email present) rather than invent a URL that could point at the wrong account — flagged for the human to fill.
+
+---
+
+## 2026-05-29 — Optional polish: PRD backfill + extensibility (and a latent-bug catch)
+
+**Context:** Final optional pass from the deep review — the trivial trio (doc/CI/DRY nits), backfilling all 6 per-mechanism PRDs with *Alternatives considered* + *Performance metrics*, and the extensibility item (middleware chain + lifecycle hooks).
+**Lessons:**
+- **A doc-freshness change forced a real correctness fix.** Adding `__init__` re-exports last session (`from debate.sdk.sdk import DebateSDK`) created a **latent circular import**: `process_worker → debate.sdk.wiring → debate.sdk/__init__ → sdk.sdk → process_orchestrator`. The full suite hid it (import ordering — something imported `sdk.sdk` first), but running `pytest tests/unit/test_process_orchestrator.py` *alone* failed. Fix: keep `debate.sdk/__init__` lightweight (version only, no facade re-export), since a *services* worker transitively imports it. Lesson: a package `__init__` that's pulled in by a worker must not eagerly import heavy siblings; and **run a suspect test file in isolation**, not just the whole suite, or import-order bugs stay hidden.
+- **Middleware as a no-op-by-default seam.** `compose([], fn) is fn` — empty middleware list returns the original callable, so the extension point adds exactly zero overhead and zero behavior change until someone opts in. Verified by an identity assertion.
+- **Lifecycle hooks reused the existing observer.** Rather than a parallel hooks object, the four lifecycle events ride the existing `on_event` stream; the CLI's if/elif printer ignores unknown kinds, so adding them was safe there — only the two event-sequence tests needed updating (a deliberate contract extension).
+- **Backfilling PRDs surfaced stale facts.** Writing each PRD's *Alternatives* section made me reconcile the model default (config says `gpt-4o-mini`, three PRDs still claimed Anthropic) and the Cats skill count (4 → 6) — fixed in passing so the new sections don't contradict the old ones.
+
+---
+
 ## Where the per-component prompts live (not a TODO — final locations)
 
 Every prompt that was on the original "to log" list is now part of the shipping code or skill files. Pointer table for graders:

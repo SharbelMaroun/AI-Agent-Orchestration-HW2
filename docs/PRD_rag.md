@@ -88,3 +88,18 @@ For each round (Dogs or Cats):
 - Reranking with a cross-encoder.
 - Updating the corpus from web search results (corpus is static post-ingest).
 - Multi-modal RAG (text only).
+
+## 9. Alternatives considered
+| Option | Chosen? | Rationale |
+|---|---|---|
+| **ChromaDB** (embedded, persistent) vs FAISS / pgvector / in-memory | ✅ Chroma | Zero-setup, file-backed persistence under `data/<agent>/chroma/`, per-collection isolation — no server to run on a fresh clone. FAISS needs a separate id→text map; pgvector needs a DB. |
+| **`all-MiniLM-L6-v2`** (384-dim, CPU) vs `all-mpnet-base-v2` / remote embedding API | ✅ MiniLM | Free, local, fast on CPU, no key, no rate limit; quality is ample for 15-passage corpora. A remote API would re-introduce the cost/latency RAG was meant to avoid. |
+| **Hand-rolled `key: value` frontmatter parser** vs PyYAML | ✅ hand parser | Smaller dependency footprint; surfaces authoring typos immediately; the corpus only needs flat key/value frontmatter. |
+| **Word-count chunking** vs sentence/semantic chunking | ✅ word chunks | Deterministic, dependency-free, adequate for short curated passages; semantic chunking adds a model for no measurable retrieval gain here. |
+| Cross-encoder reranking | ❌ (out of scope) | Marginal gain over bi-encoder top-k for a tiny corpus; adds a second model + latency. |
+
+## 10. Performance metrics
+- **Embedding:** 384-dim vectors; model loaded **once per process** (class-level cache in `embedder.py`), CPU-only, no GPU.
+- **Corpus:** ≥ 15 passages/side, ≤ 300 words each; two disjoint collections.
+- **Retrieval:** top-`k=3` per query; one `retrieve()` per speaking ping (≈ 10/side/debate).
+- **Ingestion:** idempotent — re-runs skip already-stored chunks via a sha1(`file:idx`) key truncated to 16 chars; first-run indexes the whole corpus in a single pass.

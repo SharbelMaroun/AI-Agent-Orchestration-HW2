@@ -6,7 +6,9 @@
 ---
 
 ## 1. Purpose
-Single chokepoint for **all external API calls** (LLM, web search, embedding API if used). Provides rate limiting, retries, queueing, cost tracking, and centralized logging. Prevents budget surprises and surfaces operational health in one place.
+Single chokepoint for **all external API calls** — LLM completions and web search. Provides rate limiting, retries, queueing, cost tracking, and centralized logging. Prevents budget surprises and surfaces operational health in one place.
+
+> **Embeddings are out of scope by design.** The RAG embedder (`sentence-transformers/all-MiniLM-L6-v2`) and ChromaDB run **locally** — no network call, no rate limit, no per-token billing — so they are intentionally *not* routed through the gatekeeper (CLAUDE.md §5 governs *external* API calls). If a remote embedding API is ever configured, it must be wrapped in `execute(..., service="embedding")`.
 
 ## 2. Responsibilities
 1. **Rate limiting** — block calls that would exceed configured limits.
@@ -102,7 +104,7 @@ Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of b
 - Cost report exposes a "% input tokens served from cache" metric.
 
 ## 10. Acceptance criteria
-- No direct LLM/search/embedding call anywhere in `src/` except inside `gatekeeper.execute(...)`.
+- No direct **external** LLM or web-search call anywhere in `src/` except inside `gatekeeper.execute(...)`. (Local RAG embedding + ChromaDB make no external call and are intentionally exempt — see §1.)
 - 100% coverage of retry, queue, and budget paths.
 - `get_token_summary()` matches sum of `cost_log.jsonl` exactly.
 - Concurrent calls respect `concurrent_max` (verified by a concurrency test).
@@ -114,3 +116,19 @@ Configured via `config/setup.json.budget_usd`. If running total exceeds 80% of b
 - **Hard failure** — 3 consecutive 503s → raises `ApiCallFailedError`.
 - **Budget exceeded** — mock pricing to exceed budget mid-debate → raises `BudgetExceededError`.
 - **Concurrent excess** — 10 simultaneous calls with `concurrent_max=2` → only 2 in flight at a time.
+
+## 12. Alternatives considered
+| Option | Chosen? | Rationale |
+|---|---|---|
+| **Rolling-window** rate limiting (deque of timestamps) vs token-bucket | ✅ rolling window | Enforces exact `requests_per_minute`/`_per_hour` simultaneously; O(1) amortized prune. Token-bucket smooths bursts but needs refill tuning we don't need at this scale. |
+| **Polling spin-wait for a slot** vs a real `queue.Queue` + worker pool | ✅ spin-wait (documented) | At ~60 calls/debate against a depth-100 cap the queue never fills; a worker pool adds threads + lifecycle complexity for no benefit. Trade-off and the `QueueFullError`-vs-"never reject" spec tension are noted in §7. |
+| **Per-request `timeout` kwarg** vs a client-level timeout | ✅ per-request | Threaded from `setup.timeouts.agent_response_seconds` so the cap is config-driven and sits below the watchdog kill; per-request is uniform across providers. |
+| **Middleware chain** (composable cross-cutting decoration) vs hardcoding logging/timing inside `execute` | ✅ middleware | Lets consumers add logging/auth/metrics around every call without editing the gatekeeper (CLAUDE.md §19). See PLAN "Extension points". |
+| Local-embedding routing through the gatekeeper | ❌ | Embeddings are a *local* model — no external API, no rate limit, no billing — so routing them adds overhead with no benefit (§1). |
+
+## 13. Performance metrics
+- **Rate-window ops:** O(1) amortized `add`/`prune` per call (deque).
+- **Concurrency:** bounded by `concurrent_max` (semaphore); default 5 for LLM, 2 for search.
+- **Retry cost:** linear backoff `retry_after_seconds × attempt`, ≤ `max_retries` attempts.
+- **Per-debate load:** ≈ 41 LLM + ≈ 20 search `execute()` calls; each records tokens + cost and checks the budget (O(1)).
+- **Cost-tracking overhead:** one dict update + one JSONL append per call; negligible vs the network round-trip.
